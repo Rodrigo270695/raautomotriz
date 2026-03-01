@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    /* Fuente profesional para sidebar (similar espíritu al logo RA) */
+    --font-sidebar:
+        'Plus Jakarta Sans', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* RA Automotriz – marca (azul marino + rojo) */
+    --color-ra-navy: var(--ra-navy);
+    --color-ra-navy-light: var(--ra-navy-light);
+    --color-ra-red: var(--ra-red);
+    --color-ra-red-hover: var(--ra-red-hover);
+
+    /* Área de contenido (layout 2026: cohesión con sidebar) */
+    --color-content: var(--content-bg);
+    --color-content-border: var(--content-border);
+    --color-content-muted: var(--content-muted);
+}
+
+:root {
+    /* Fondo global: tinte azulado suave 2026 (cohesión con sidebar) */
+    --background: oklch(0.985 0.004 248);
+    --foreground: oklch(0.18 0.02 250);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 0.02 250);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 0.02 250);
+    /* Primary = rojo RA (acciones principales) */
+    --primary: #e12a2d;
+    --primary-foreground: #f8fafc;
+    --secondary: oklch(0.96 0.008 248);
+    --secondary-foreground: oklch(0.25 0.02 250);
+    --muted: oklch(0.965 0.006 248);
+    --muted-foreground: oklch(0.45 0.02 250);
+    --accent: oklch(0.94 0.015 248);
+    --accent-foreground: oklch(0.22 0.02 250);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.91 0.012 248);
+    --input: oklch(0.92 0.01 248);
+    --ring: #2d4a6f;
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.75rem;
+    /* Sidebar: mismo matiz que contenido, transición visual suave */
+    --sidebar: oklch(0.98 0.006 248);
+    --sidebar-foreground: oklch(0.2 0.02 250);
+    --sidebar-primary: oklch(0.22 0.02 250);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: #2d4a6f;
+    --sidebar-accent-foreground: #f8fafc;
+    --sidebar-border: oklch(0.91 0.012 248);
+    --sidebar-ring: #2d4a6f;
+
+    /* Área de contenido (panel principal): un poco más claro que sidebar */
+    --content-bg: oklch(0.992 0.003 248);
+    --content-border: oklch(0.92 0.01 248);
+    --content-muted: oklch(0.96 0.008 248);
+
+    /* RA Automotriz – azul marino y rojo (logo) */
+    --ra-navy: #0f172a;
+    --ra-navy-light: #1e293b;
+    --ra-red: #e12a2d;
+    --ra-red-hover: #c92427;
+}
+
+.dark {
+    --background: oklch(0.14 0.015 248);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.18 0.02 248);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.18 0.02 248);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: #e12a2d;
+    --primary-foreground: #f8fafc;
+    --secondary: oklch(0.25 0.02 248);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.24 0.02 248);
+    --muted-foreground: oklch(0.7 0 0);
+    --accent: oklch(0.28 0.02 248);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.396 0.141 25.723);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: oklch(0.28 0.02 248);
+    --input: oklch(0.26 0.02 248);
+    --ring: #3d5a80;
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.16 0.02 248);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: #2d4a6f;
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: #2d4a6f;
+    --sidebar-accent-foreground: #f8fafc;
+    --sidebar-border: oklch(0.28 0.02 248);
+    --sidebar-ring: #334155;
+
+    --content-bg: oklch(0.15 0.018 248);
+    --content-border: oklch(0.26 0.02 248);
+    --content-muted: oklch(0.22 0.02 248);
+
+    --ra-navy: #0f172a;
+    --ra-navy-light: #1e293b;
+    --ra-red: #e12a2d;
+    --ra-red-hover: #c92427;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* Resaltado de texto (selección): azul marino */
+    ::selection {
+        background-color: var(--ra-navy);
+        color: #f8fafc;
+    }
+
+    /* Resaltado dentro de inputs/textarea: azul marino (no heredan ::selection en algunos navegadores) */
+    input::selection,
+    textarea::selection {
+        background-color: var(--ra-navy);
+        color: #f8fafc;
+    }
+
+    /* Sidebar: fuente y borde sutil 2026 (separación elegante con contenido) */
+    [data-sidebar='sidebar'] {
+        font-family: var(--font-sidebar);
+        border-inline-end: 1px solid oklch(0.88 0.02 248 / 0.5);
+    }
+    .dark [data-sidebar='sidebar'] {
+        border-inline-end-color: oklch(0.3 0.02 248 / 0.6);
+    }
+
+    /* Área de contenido: fondo dedicado y sombra suave (inset) */
+    [data-slot='sidebar-inset'] {
+        background-color: var(--content-bg);
+        box-shadow: inset 0 0 0 1px oklch(0.92 0.01 248 / 0.4);
+    }
+    .dark [data-slot='sidebar-inset'] {
+        box-shadow: inset 0 0 0 1px oklch(0.26 0.02 248 / 0.5);
+    }
+}

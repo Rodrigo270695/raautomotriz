@@ -1,0 +1,437 @@
+import { useForm } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import type { User } from '@/types';
+
+/** Asterisco rojo para campos obligatorios (mismo estilo que auth). */
+const RequiredAsterisk = () => <span className="text-destructive" aria-hidden>*</span>;
+
+const DOCUMENT_TYPES = [
+    { value: 'dni', label: 'DNI' },
+    { value: 'ce', label: 'CE (Cédula de extranjería)' },
+    { value: 'pasaporte', label: 'Pasaporte' },
+    { value: 'ruc', label: 'RUC' },
+] as const;
+
+type RoleOption = { id: number; name: string };
+
+type UserFormModalProps = {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    user?: User | null;
+    usersIndexPath: string;
+    roles: RoleOption[];
+};
+
+export function UserFormModal({ open, onOpenChange, user, usersIndexPath, roles }: UserFormModalProps) {
+    const isEdit = Boolean(user?.id);
+    const initialRoleId = user?.roles?.[0]?.id ?? '';
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+    const { data, setData, post, put, processing, errors, reset } = useForm({
+        first_name: user?.first_name ?? '',
+        last_name: user?.last_name ?? '',
+        document_type: (user?.document_type as string) ?? 'dni',
+        document_number: (user?.document_number as string) ?? '',
+        username: user?.username ?? '',
+        email: (user?.email as string) ?? '',
+        phone: (user?.phone as string) ?? '',
+        status: (user?.status as string) ?? 'active',
+        password: '',
+        password_confirmation: '',
+        role_id: initialRoleId === '' ? '' : String(initialRoleId),
+    });
+
+    useEffect(() => {
+        if (open) {
+            const roleId = user?.roles?.[0]?.id ?? '';
+            setData({
+                first_name: user?.first_name ?? '',
+                last_name: user?.last_name ?? '',
+                document_type: (user?.document_type as string) ?? 'dni',
+                document_number: (user?.document_number as string) ?? '',
+                username: user?.username ?? '',
+                email: (user?.email as string) ?? '',
+                phone: (user?.phone as string) ?? '',
+                status: (user?.status as string) ?? 'active',
+                password: '',
+                password_confirmation: '',
+                role_id: roleId === '' ? '' : String(roleId),
+            });
+        }
+    }, [open, user?.id, user?.first_name, user?.last_name, user?.document_type, user?.document_number, user?.username, user?.email, user?.phone, user?.status, user?.roles]);
+
+    const requiredBaseFilled =
+        data.first_name.trim() !== '' &&
+        data.last_name.trim() !== '' &&
+        data.document_type.trim() !== '' &&
+        data.document_number.trim() !== '' &&
+        data.username.trim() !== '';
+    const passwordRequiredFilled = !isEdit
+        ? data.password.trim() !== '' && data.password_confirmation.trim() !== ''
+        : true;
+    const canSubmit = requiredBaseFilled && passwordRequiredFilled;
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isEdit && user) {
+            put(`${usersIndexPath}/${user.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    reset();
+                    onOpenChange(false);
+                },
+            });
+        } else {
+            post(usersIndexPath, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    reset();
+                    onOpenChange(false);
+                },
+            });
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="border-content-border bg-card w-[calc(100%-1rem)] max-w-md sm:w-full">
+                <DialogHeader>
+                    <DialogTitle className="text-foreground">
+                        {isEdit ? 'Editar usuario' : 'Nuevo usuario'}
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {isEdit ? 'Modifique los datos del usuario.' : 'Indique los datos del nuevo usuario.'}
+                    </DialogDescription>
+                </DialogHeader>
+                <Separator className="bg-content-border" />
+                <form onSubmit={submit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="user-first_name" className="text-foreground">
+                                Nombre <RequiredAsterisk />
+                            </Label>
+                            <Input
+                                id="user-first_name"
+                                value={data.first_name}
+                                onChange={(e) => setData('first_name', e.target.value)}
+                                placeholder="Ej. Juan"
+                                className="border-content-border focus-visible:ring-(--sidebar-accent)"
+                                autoFocus={!isEdit}
+                                autoComplete="given-name"
+                            />
+                            {errors.first_name && (
+                                <p className="text-sm text-destructive">{errors.first_name}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="user-last_name" className="text-foreground">
+                                Apellido <RequiredAsterisk />
+                            </Label>
+                            <Input
+                                id="user-last_name"
+                                value={data.last_name}
+                                onChange={(e) => setData('last_name', e.target.value)}
+                                placeholder="Ej. Pérez"
+                                className="border-content-border focus-visible:ring-(--sidebar-accent)"
+                                autoComplete="family-name"
+                            />
+                            {errors.last_name && (
+                                <p className="text-sm text-destructive">{errors.last_name}</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="user-document_type" className="text-foreground">
+                                Tipo de documento <RequiredAsterisk />
+                            </Label>
+                            <Select
+                                value={data.document_type}
+                                onValueChange={(v) => {
+                                    setData('document_type', v);
+                                    if (v === 'dni') {
+                                        setData('document_number', (data.document_number ?? '').replace(/\D/g, '').slice(0, 8));
+                                    } else if (v === 'ruc') {
+                                        setData('document_number', (data.document_number ?? '').replace(/\D/g, '').slice(0, 11));
+                                    }
+                                }}
+                            >
+                                <SelectTrigger id="user-document_type" className="border-content-border">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DOCUMENT_TYPES.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.document_type && (
+                                <p className="text-sm text-destructive">{errors.document_type}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="user-document_number" className="text-foreground">
+                                Número de documento <RequiredAsterisk />
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="user-document_number"
+                                    value={data.document_number}
+                                    onChange={(e) => {
+                                        const raw = e.target.value;
+                                        if (data.document_type === 'dni') {
+                                            setData('document_number', raw.replace(/\D/g, '').slice(0, 8));
+                                        } else if (data.document_type === 'ruc') {
+                                            setData('document_number', raw.replace(/\D/g, '').slice(0, 11));
+                                        } else {
+                                            setData('document_number', raw.slice(0, 20));
+                                        }
+                                    }}
+                                    placeholder={
+                                        data.document_type === 'dni' ? '8 dígitos' : data.document_type === 'ruc' ? '11 dígitos' : 'Ej. 12345678'
+                                    }
+                                    className={`border-content-border focus-visible:ring-(--sidebar-accent) ${data.document_type === 'dni' || data.document_type === 'ruc' ? 'pr-11' : ''}`}
+                                    autoComplete="off"
+                                    inputMode={data.document_type === 'dni' || data.document_type === 'ruc' ? 'numeric' : 'text'}
+                                    maxLength={data.document_type === 'dni' ? 8 : data.document_type === 'ruc' ? 11 : 20}
+                                />
+                                {data.document_type === 'dni' && (
+                                    <span
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs tabular-nums"
+                                        aria-hidden
+                                    >
+                                        {data.document_number.length}/8
+                                    </span>
+                                )}
+                                {data.document_type === 'ruc' && (
+                                    <span
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs tabular-nums"
+                                        aria-hidden
+                                    >
+                                        {data.document_number.length}/11
+                                    </span>
+                                )}
+                            </div>
+                            {errors.document_number && (
+                                <p className="text-sm text-destructive">{errors.document_number}</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="user-username" className="text-foreground">
+                                Usuario <RequiredAsterisk />
+                            </Label>
+                            <Input
+                                id="user-username"
+                                value={data.username}
+                                onChange={(e) => setData('username', e.target.value.toLowerCase())}
+                                placeholder="Ej. jperez"
+                                className="border-content-border focus-visible:ring-(--sidebar-accent) lowercase"
+                                autoComplete="username"
+                            />
+                            {errors.username && (
+                                <p className="text-sm text-destructive">{errors.username}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="user-phone" className="text-foreground">
+                                Celular
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="user-phone"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    value={data.phone}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/\D/g, '').slice(0, 9);
+                                        const normalized = raw.length > 0 && raw[0] !== '9' ? '9' + raw.slice(1) : raw;
+                                        setData('phone', normalized);
+                                    }}
+                                    placeholder="9 dígitos (empieza por 9)"
+                                    className="border-content-border focus-visible:ring-(--sidebar-accent) pr-11"
+                                    autoComplete="tel"
+                                    maxLength={9}
+                                />
+                                <span
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs tabular-nums"
+                                    aria-hidden
+                                >
+                                    {data.phone.length}/9
+                                </span>
+                            </div>
+                            {errors.phone && (
+                                <p className="text-sm text-destructive">{errors.phone}</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="user-email" className="text-foreground">
+                            Correo
+                        </Label>
+                        <Input
+                            id="user-email"
+                            type="email"
+                            value={data.email}
+                            onChange={(e) => setData('email', e.target.value)}
+                            placeholder="correo@ejemplo.com"
+                            className="border-content-border focus-visible:ring-(--sidebar-accent)"
+                            autoComplete="email"
+                        />
+                        {errors.email && (
+                            <p className="text-sm text-destructive">{errors.email}</p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="user-role_id" className="text-foreground">
+                            Rol
+                        </Label>
+                        <Select
+                            value={data.role_id === '' ? 'none' : data.role_id}
+                            onValueChange={(v) => setData('role_id', v === 'none' ? '' : v)}
+                        >
+                            <SelectTrigger id="user-role_id" className="border-content-border">
+                                <SelectValue placeholder="Seleccionar rol" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Sin rol</SelectItem>
+                                {roles.map((r) => (
+                                    <SelectItem key={r.id} value={String(r.id)}>
+                                        {r.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {errors.role_id && (
+                            <p className="text-sm text-destructive">{errors.role_id}</p>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="user-password" className="text-foreground">
+                                Contraseña {!isEdit && <RequiredAsterisk />} {isEdit && '(dejar en blanco para no cambiar)'}
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="user-password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={data.password}
+                                    onChange={(e) => setData('password', e.target.value)}
+                                    placeholder={isEdit ? '••••••••' : 'Mín. 8 caracteres'}
+                                    className="border-content-border focus-visible:ring-(--sidebar-accent) pr-10"
+                                    autoComplete={isEdit ? 'new-password' : 'new-password'}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((v) => !v)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded p-1.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30"
+                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="size-4" aria-hidden />
+                                    ) : (
+                                        <Eye className="size-4" aria-hidden />
+                                    )}
+                                </button>
+                            </div>
+                            {errors.password && (
+                                <p className="text-sm text-destructive">{errors.password}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="user-password_confirmation" className="text-foreground">
+                                Confirmar contraseña {!isEdit && <RequiredAsterisk />}
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="user-password_confirmation"
+                                    type={showPasswordConfirmation ? 'text' : 'password'}
+                                    value={data.password_confirmation}
+                                    onChange={(e) => setData('password_confirmation', e.target.value)}
+                                    placeholder="Repetir contraseña"
+                                    className="border-content-border focus-visible:ring-(--sidebar-accent) pr-10"
+                                    autoComplete="new-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPasswordConfirmation((v) => !v)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded p-1.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/30"
+                                    aria-label={showPasswordConfirmation ? 'Ocultar contraseña' : 'Ver contraseña'}
+                                >
+                                    {showPasswordConfirmation ? (
+                                        <EyeOff className="size-4" aria-hidden />
+                                    ) : (
+                                        <Eye className="size-4" aria-hidden />
+                                    )}
+                                </button>
+                            </div>
+                            {errors.password_confirmation && (
+                                <p className="text-sm text-destructive">{errors.password_confirmation}</p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                        <Checkbox
+                            id="user-status"
+                            checked={data.status === 'active'}
+                            onCheckedChange={(checked) =>
+                                setData('status', checked === true ? 'active' : 'inactive')
+                            }
+                            className="border-content-border"
+                        />
+                        <Label
+                            htmlFor="user-status"
+                            className="text-foreground cursor-pointer text-sm font-normal"
+                        >
+                            Estado activo
+                        </Label>
+                        {errors.status && (
+                            <p className="text-sm text-destructive ml-2">{errors.status}</p>
+                        )}
+                    </div>
+                    <DialogFooter className="flex flex-wrap gap-2 sm:justify-end sm:gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            className="cursor-pointer border-content-border min-w-0 flex-1 sm:flex-none"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={processing || !canSubmit}
+                            className="cursor-pointer min-w-0 flex-1 sm:flex-none bg-rose-500/85 text-white hover:bg-rose-600 dark:bg-rose-600/90 dark:hover:bg-rose-700"
+                        >
+                            {processing ? 'Guardando…' : isEdit ? 'Actualizar' : 'Crear'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
