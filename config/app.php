@@ -69,6 +69,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Local Display Timezone
+    |--------------------------------------------------------------------------
+    | Timezone used when formatting dates for display (e.g. Lima local time).
+    */
+
+    'local_timezone' => env('APP_LOCAL_TIMEZONE', 'America/Lima'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Company Name
+    |--------------------------------------------------------------------------
+    | Used in notifications, emails and printed documents.
+    */
+
+    'company_name' => env('APP_COMPANY_NAME', 'RA Automotriz S.A.C.'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | IGV Rate
+    |--------------------------------------------------------------------------
+    | Peruvian tax rate used for ticket/invoice calculations (default 18%).
+    */
+
+    'igv_rate' => (float) env('APP_IGV_RATE', 0.18),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

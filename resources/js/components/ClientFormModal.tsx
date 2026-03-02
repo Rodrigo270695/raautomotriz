@@ -22,16 +22,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { User } from '@/types';
-
-/** Asterisco rojo para campos obligatorios (mismo estilo que auth). */
-const RequiredAsterisk = () => <span className="text-destructive" aria-hidden>*</span>;
-
-const DOCUMENT_TYPES = [
-    { value: 'dni', label: 'DNI' },
-    { value: 'ce', label: 'CE (Cédula de extranjería)' },
-    { value: 'pasaporte', label: 'Pasaporte' },
-    { value: 'ruc', label: 'RUC' },
-] as const;
+import { RequiredAsterisk } from '@/components/form/RequiredAsterisk';
+import { DOCUMENT_TYPES } from '@/lib/documentUtils';
 
 type ClientFormModalProps = {
     open: boolean;
@@ -47,11 +39,11 @@ export function ClientFormModal({ open, onOpenChange, client, clientsIndexPath }
     const { data, setData, post, put, processing, errors, reset } = useForm({
         first_name: client?.first_name ?? '',
         last_name: client?.last_name ?? '',
-        document_type: (client?.document_type as string) ?? 'dni',
-        document_number: (client?.document_number as string) ?? '',
-        email: (client?.email as string) ?? '',
-        phone: (client?.phone as string) ?? '',
-        status: (client?.status as string) ?? 'active',
+        document_type: client?.document_type ?? 'dni',
+        document_number: client?.document_number ?? '',
+        email: client?.email ?? '',
+        phone: client?.phone ?? '',
+        status: client?.status ?? 'active',
         password: '',
         password_confirmation: '',
     });
@@ -61,11 +53,11 @@ export function ClientFormModal({ open, onOpenChange, client, clientsIndexPath }
             setData({
                 first_name: client?.first_name ?? '',
                 last_name: client?.last_name ?? '',
-                document_type: (client?.document_type as string) ?? 'dni',
-                document_number: (client?.document_number as string) ?? '',
-                email: (client?.email as string) ?? '',
-                phone: (client?.phone as string) ?? '',
-                status: (client?.status as string) ?? 'active',
+                document_type: client?.document_type ?? 'dni',
+                document_number: client?.document_number ?? '',
+                email: client?.email ?? '',
+                phone: client?.phone ?? '',
+                status: client?.status ?? 'active',
                 password: '',
                 password_confirmation: '',
             });
@@ -77,7 +69,6 @@ export function ClientFormModal({ open, onOpenChange, client, clientsIndexPath }
         data.last_name.trim() !== '' &&
         data.document_type.trim() !== '' &&
         data.document_number.trim() !== '' &&
-        data.email.trim() !== '' &&
         data.phone.trim() !== '';
     const passwordRequiredFilled = !isEdit
         ? data.password.trim() !== '' && data.password_confirmation.trim() !== ''
@@ -234,7 +225,8 @@ export function ClientFormModal({ open, onOpenChange, client, clientsIndexPath }
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="client-email" className="text-foreground">
-                            Correo <RequiredAsterisk />
+                            Correo
+                            <span className="ml-1 text-xs text-muted-foreground font-normal">(opcional)</span>
                         </Label>
                         <Input
                             id="client-email"

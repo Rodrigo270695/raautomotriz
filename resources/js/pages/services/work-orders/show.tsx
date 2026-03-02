@@ -42,8 +42,8 @@ type ShowPageProps = {
         completed_at: string | null;
     }>;
     checklistResultsPath?: string;
-    vehicles: Array<{ id: number; plate: string; vehicle_model_id: number | null; client_id: number; vehicle_model?: { id: number; name: string } }>;
-    clients: Array<{ id: number; first_name: string; last_name: string; document_number?: string | null }>;
+    initialClient?: { id: number; first_name: string; last_name: string; document_number?: string | null } | null;
+    initialVehicle?: { id: number; plate: string; vehicle_model_id: number | null; client_id: number; vehicle_model?: { id: number; name: string } | null } | null;
     services: WorkOrderServiceItem[];
     servicesTotal: number;
     servicesBasePath: string;
@@ -91,8 +91,8 @@ export default function WorkOrderShowPage({
     serviceChecklists = [],
     checklistResults,
     checklistResultsPath,
-    vehicles,
-    clients,
+    initialClient,
+    initialVehicle,
     services,
     servicesTotal,
     servicesBasePath,
@@ -302,8 +302,12 @@ export default function WorkOrderShowPage({
                             type="button"
                             role="tab"
                             aria-selected={activeTab === 'diagnosticos'}
-                            aria-disabled={!diagnosticosEnabled}
+                            aria-disabled={!diagnosticosEnabled || undefined}
+                            tabIndex={!diagnosticosEnabled ? -1 : undefined}
                             onClick={() => diagnosticosEnabled && setActiveTab('diagnosticos')}
+                            onKeyDown={(e) => {
+                                if (!diagnosticosEnabled && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();
+                            }}
                             className={cn(
                                 'flex-1 rounded-md py-2 text-sm font-medium transition-colors sm:flex-none sm:px-4',
                                 !diagnosticosEnabled && 'cursor-not-allowed opacity-60',
@@ -322,8 +326,12 @@ export default function WorkOrderShowPage({
                             type="button"
                             role="tab"
                             aria-selected={activeTab === 'servicios'}
-                            aria-disabled={!serviciosEnabled}
+                            aria-disabled={!serviciosEnabled || undefined}
+                            tabIndex={!serviciosEnabled ? -1 : undefined}
                             onClick={() => serviciosEnabled && setActiveTab('servicios')}
+                            onKeyDown={(e) => {
+                                if (!serviciosEnabled && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();
+                            }}
                             className={cn(
                                 'flex-1 rounded-md py-2 text-sm font-medium transition-colors sm:flex-none sm:px-4',
                                 !serviciosEnabled && 'cursor-not-allowed opacity-60',
@@ -398,8 +406,8 @@ export default function WorkOrderShowPage({
                 onOpenChange={setEditModalOpen}
                 workOrder={workOrder as Parameters<typeof WorkOrderFormModal>[0]['workOrder']}
                 workOrdersIndexPath={workOrdersIndexPath}
-                vehicles={vehicles}
-                clients={clients}
+                initialClient={initialClient}
+                initialVehicle={initialVehicle}
             />
 
             <DeleteWorkOrderDialog

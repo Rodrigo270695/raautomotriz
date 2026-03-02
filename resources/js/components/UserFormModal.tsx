@@ -22,16 +22,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { User } from '@/types';
-
-/** Asterisco rojo para campos obligatorios (mismo estilo que auth). */
-const RequiredAsterisk = () => <span className="text-destructive" aria-hidden>*</span>;
-
-const DOCUMENT_TYPES = [
-    { value: 'dni', label: 'DNI' },
-    { value: 'ce', label: 'CE (Cédula de extranjería)' },
-    { value: 'pasaporte', label: 'Pasaporte' },
-    { value: 'ruc', label: 'RUC' },
-] as const;
+import { RequiredAsterisk } from '@/components/form/RequiredAsterisk';
+import { DOCUMENT_TYPES } from '@/lib/documentUtils';
 
 type RoleOption = { id: number; name: string };
 
@@ -51,12 +43,12 @@ export function UserFormModal({ open, onOpenChange, user, usersIndexPath, roles 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         first_name: user?.first_name ?? '',
         last_name: user?.last_name ?? '',
-        document_type: (user?.document_type as string) ?? 'dni',
-        document_number: (user?.document_number as string) ?? '',
+        document_type: user?.document_type ?? 'dni',
+        document_number: user?.document_number ?? '',
         username: user?.username ?? '',
-        email: (user?.email as string) ?? '',
-        phone: (user?.phone as string) ?? '',
-        status: (user?.status as string) ?? 'active',
+        email: user?.email ?? '',
+        phone: user?.phone ?? '',
+        status: user?.status ?? 'active',
         password: '',
         password_confirmation: '',
         role_id: initialRoleId === '' ? '' : String(initialRoleId),
@@ -68,12 +60,12 @@ export function UserFormModal({ open, onOpenChange, user, usersIndexPath, roles 
             setData({
                 first_name: user?.first_name ?? '',
                 last_name: user?.last_name ?? '',
-                document_type: (user?.document_type as string) ?? 'dni',
-                document_number: (user?.document_number as string) ?? '',
+                document_type: user?.document_type ?? 'dni',
+                document_number: user?.document_number ?? '',
                 username: user?.username ?? '',
-                email: (user?.email as string) ?? '',
-                phone: (user?.phone as string) ?? '',
-                status: (user?.status as string) ?? 'active',
+                email: user?.email ?? '',
+                phone: user?.phone ?? '',
+                status: user?.status ?? 'active',
                 password: '',
                 password_confirmation: '',
                 role_id: roleId === '' ? '' : String(roleId),

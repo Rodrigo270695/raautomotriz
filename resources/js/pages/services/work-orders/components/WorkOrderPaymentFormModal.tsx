@@ -42,6 +42,8 @@ type WorkOrderPaymentFormModalProps = {
     paymentsBasePath: string;
     /** Si ya existe un pago de tipo adelanto, no se ofrece "Adelanto" en el select (solo Abono / Pago final). */
     hasAdvancePayment?: boolean;
+    /** Saldo pendiente de la orden. Al seleccionar "Pago final" se auto-rellena este monto. */
+    pendingAmount?: number;
 };
 
 function formatDateTimeLocal(iso: string | null): string {
@@ -61,6 +63,7 @@ export function WorkOrderPaymentFormModal({
     payment,
     paymentsBasePath,
     hasAdvancePayment = false,
+    pendingAmount = 0,
 }: WorkOrderPaymentFormModalProps) {
     const isEdit = payment != null;
     const typeOptions = hasAdvancePayment
@@ -155,7 +158,17 @@ export function WorkOrderPaymentFormModal({
                             </Label>
                             <Select
                                 value={data.type}
-                                onValueChange={(v) => setData('type', v)}
+                                onValueChange={(v) => {
+                                    if (v === 'final' && !isEdit && pendingAmount > 0) {
+                                        setData((prev) => ({
+                                            ...prev,
+                                            type: v,
+                                            amount: pendingAmount,
+                                        }));
+                                    } else {
+                                        setData('type', v);
+                                    }
+                                }}
                             >
                                 <SelectTrigger id="wo-payment-type" className="border-content-border">
                                     <SelectValue placeholder="Tipo de pago" />

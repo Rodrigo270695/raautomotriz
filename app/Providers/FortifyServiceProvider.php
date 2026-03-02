@@ -49,8 +49,11 @@ class FortifyServiceProvider extends ServiceProvider
             if (! $login) {
                 return null;
             }
-            $user = User::where('username', $login)
-                ->orWhere('document_number', $login)
+            $user = User::where(function ($q) use ($login) {
+                $q->where('username', $login)
+                    ->orWhere('document_number', $login);
+            })
+                ->where('status', 'active')
                 ->first();
             if ($user && Hash::check($request->password, $user->password)) {
                 return $user;

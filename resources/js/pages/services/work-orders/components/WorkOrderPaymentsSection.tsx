@@ -341,6 +341,7 @@ export function WorkOrderPaymentsSection({
                         payment={null}
                         paymentsBasePath={paymentsBasePath}
                         hasAdvancePayment={hasAdvancePayment}
+                        pendingAmount={balancePending}
                     />
                     <WorkOrderPaymentDeleteDialog
                         open={!!paymentToDelete}

@@ -9,7 +9,7 @@ export type WorkOrder = {
     exit_mileage: number | null;
     client_observation: string | null;
     diagnosis: string | null;
-    status: string;
+    status: WorkOrderStatus;
     advance_payment_amount: string;
     total_amount: string;
     /** Total abonado (suma de pagos). Solo en listado. */
@@ -27,6 +27,7 @@ export type WorkOrder = {
         id: number;
         first_name: string;
         last_name: string;
+        document_number?: string | null;
     };
     /** Si el usuario actual puede editar esta orden (creador o superadmin + permiso). */
     can_edit?: boolean;

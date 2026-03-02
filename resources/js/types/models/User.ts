@@ -25,5 +25,4 @@ export type User = {
     vehicles_count?: number;
     /** Roles del usuario (with('roles')). */
     roles?: Array<{ id: number; name: string }>;
-    [key: string]: unknown;
 };

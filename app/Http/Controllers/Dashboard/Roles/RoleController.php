@@ -25,9 +25,9 @@ class RoleController extends Controller
 
         $filterPermissions = $request->input('filter_permissions', 'all');
         if ($filterPermissions === 'with') {
-            $query->having('permissions_count', '>', 0);
+            $query->whereHas('permissions');
         } elseif ($filterPermissions === 'without') {
-            $query->having('permissions_count', '=', 0);
+            $query->whereDoesntHave('permissions');
         }
 
         $sortBy = $request->input('sort_by', 'name');
@@ -41,10 +41,7 @@ class RoleController extends Controller
         $roles = $query->paginate($request->input('per_page', 10))
             ->withQueryString();
 
-        $rolesWithoutPermissions = Role::query()
-            ->withCount('permissions')
-            ->having('permissions_count', '=', 0)
-            ->count();
+        $rolesWithoutPermissions = Role::whereDoesntHave('permissions')->count();
 
         $lastUpdated = Role::query()->latest('updated_at')->value('updated_at');
         $lastUpdatedFormatted = $lastUpdated ? Carbon::parse($lastUpdated)->diffForHumans() : null;

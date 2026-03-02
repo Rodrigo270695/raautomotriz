@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { Calendar, FileText, LayoutGrid, Plus, Inbox, Wrench, ClipboardList, Settings } from 'lucide-react';
+import { Calendar, FileSpreadsheet, FileText, LayoutGrid, Plus, Inbox, Wrench, ClipboardList, Settings } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, WorkOrder, PaginatedResponse } from '@/types';
 import { DataTable } from '@/components/data-table';
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/tooltip';
 import { WorkOrderFormModal } from '@/components/WorkOrderFormModal';
 import { DeleteWorkOrderDialog } from '@/components/DeleteWorkOrderDialog';
+import { WORK_ORDER_STATUS_OPTIONS, getWorkOrderStatusLabel, formatCurrency } from '@/lib/workOrderUtils';
 
 const getBreadcrumbs = (workOrdersPath: string): BreadcrumbItem[] => [
     { title: 'Panel de control', href: '/dashboard' },
@@ -33,18 +34,11 @@ const getBreadcrumbs = (workOrdersPath: string): BreadcrumbItem[] => [
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'Todos' },
-    { value: 'ingreso', label: 'Ingreso' },
-    { value: 'en_checklist', label: 'En checklist' },
-    { value: 'diagnosticado', label: 'Diagnosticado' },
-    { value: 'en_reparacion', label: 'En reparación' },
-    { value: 'listo_para_entregar', label: 'Listo para entregar' },
-    { value: 'entregado', label: 'Entregado' },
-    { value: 'cancelado', label: 'Cancelado' },
+    ...WORK_ORDER_STATUS_OPTIONS,
 ];
 
 function statusLabel(status: string): string {
-    const o = STATUS_OPTIONS.find((s) => s.value === status);
-    return o?.label ?? status;
+    return getWorkOrderStatusLabel(status);
 }
 
 function statusClass(status: string): string {
@@ -52,15 +46,6 @@ function statusClass(status: string): string {
         return 'bg-content-muted/60 text-muted-foreground';
     }
     return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400';
-}
-
-function formatCurrency(value: number | string): string {
-    const n = typeof value === 'string' ? parseFloat(value) : value;
-    if (Number.isNaN(n)) return 'S/ 0.00';
-    return new Intl.NumberFormat('es-PE', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(n);
 }
 
 /** Formatea fecha y hora a dd/mm/yyyy hh:mm */
@@ -93,9 +78,8 @@ type WorkOrdersIndexProps = {
         total_work_orders: number;
         total_ingreso: number;
     };
-    vehicles: Array<{ id: number; plate: string; vehicle_model_id: number | null; vehicle_model?: { id: number; name: string } }>;
-    clients: Array<{ id: number; first_name: string; last_name: string }>;
-    can: { create: boolean; update: boolean; delete: boolean; view_photos?: boolean };
+    can: { create: boolean; update: boolean; delete: boolean; view_photos?: boolean; export?: boolean };
+    exportUrl?: string | null;
 };
 
 export default function WorkOrdersIndex({
@@ -103,9 +87,8 @@ export default function WorkOrdersIndex({
     filters,
     workOrdersIndexPath,
     stats,
-    vehicles,
-    clients,
     can,
+    exportUrl,
 }: WorkOrdersIndexProps) {
     const [formOpen, setFormOpen] = useState(false);
     const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
@@ -293,7 +276,24 @@ export default function WorkOrdersIndex({
                             Gestión de órdenes de trabajo (ingreso, diagnóstico, reparación y entrega).
                         </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {can.export && exportUrl && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="cursor-pointer shrink-0 border-[#217346]/40 bg-[#217346] text-white hover:bg-[#1a5c38] hover:text-white dark:border-[#217346]/60 dark:bg-[#217346] dark:hover:bg-[#1a5c38]"
+                                        asChild
+                                    >
+                                        <a href={exportUrl} download target="_blank" rel="noopener noreferrer" aria-label="Descargar Excel">
+                                            <FileSpreadsheet className="size-5" />
+                                        </a>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Descargar Excel</TooltipContent>
+                            </Tooltip>
+                        )}
                         {can.create && (
                             <Button
                                 onClick={openCreate}
@@ -507,8 +507,19 @@ export default function WorkOrdersIndex({
                 onOpenChange={closeForm}
                 workOrder={editingWorkOrder}
                 workOrdersIndexPath={workOrdersIndexPath}
-                vehicles={vehicles}
-                clients={clients}
+                initialClient={editingWorkOrder?.client ? {
+                    id: (editingWorkOrder.client as { id: number; first_name: string; last_name: string; document_number?: string | null }).id,
+                    first_name: (editingWorkOrder.client as { first_name: string }).first_name,
+                    last_name: (editingWorkOrder.client as { last_name: string }).last_name,
+                    document_number: (editingWorkOrder.client as { document_number?: string | null }).document_number,
+                } : null}
+                initialVehicle={editingWorkOrder?.vehicle ? {
+                    id: (editingWorkOrder.vehicle as { id: number }).id,
+                    plate: (editingWorkOrder.vehicle as { plate: string }).plate,
+                    vehicle_model_id: (editingWorkOrder.vehicle as { vehicle_model_id: number | null }).vehicle_model_id,
+                    client_id: editingWorkOrder.client_id ?? 0,
+                    vehicle_model: (editingWorkOrder.vehicle as { vehicle_model?: { id: number; name: string } | null }).vehicle_model ?? null,
+                } : null}
             />
             <DeleteWorkOrderDialog
                 open={!!deleteWorkOrder}

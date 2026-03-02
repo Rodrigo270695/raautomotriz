@@ -8,18 +8,17 @@ use Spatie\Permission\Models\Role;
 class RoleSeeder extends Seeder
 {
     /**
-     * Crea los roles: superadmin y cliente.
+     * Crea los roles del sistema.
      */
     public function run(): void
     {
-        Role::firstOrCreate(
-            ['name' => 'superadmin'],
-            ['guard_name' => 'web']
-        );
+        $roles = ['superadmin', 'admin', 'tecnico', 'recepcionista', 'cliente'];
 
-        Role::firstOrCreate(
-            ['name' => 'cliente'],
-            ['guard_name' => 'web']
-        );
+        foreach ($roles as $name) {
+            Role::firstOrCreate(
+                ['name' => $name],
+                ['guard_name' => 'web']
+            );
+        }
     }
 }

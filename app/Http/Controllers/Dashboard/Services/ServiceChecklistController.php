@@ -7,6 +7,7 @@ use App\Http\Requests\Dashboard\Services\ServiceChecklistRequest;
 use App\Models\ServiceChecklist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -125,6 +126,8 @@ class ServiceChecklistController extends Controller
         foreach ($actives as $index => $checklist) {
             $checklist->update(['order_number' => $index + 1]);
         }
+
+        Cache::forget('service_checklists_active');
     }
 
     public function destroy(ServiceChecklist $checklist): RedirectResponse

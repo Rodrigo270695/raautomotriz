@@ -2,13 +2,15 @@
 
 namespace App\Http\Requests\Dashboard\Users;
 
-use App\Models\User;
+use App\Concerns\HasDocumentValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class UserRequest extends FormRequest
 {
+    use HasDocumentValidationRules;
+
     public function authorize(): bool
     {
         return $this->isMethod('POST')
@@ -33,46 +35,31 @@ class UserRequest extends FormRequest
      */
     public function rules(): array
     {
-        $user = $this->route('user');
-
-        $docType = $this->input('document_type');
-        if ($docType === 'dni') {
-            $documentNumberRules = ['required', 'string', 'size:8', 'regex:/^[0-9]{8}$/', Rule::unique('users', 'document_number')->ignore($user?->id)];
-        } elseif ($docType === 'ruc') {
-            $documentNumberRules = ['required', 'string', 'size:11', 'regex:/^[0-9]{11}$/', Rule::unique('users', 'document_number')->ignore($user?->id)];
-        } else {
-            $documentNumberRules = ['required', 'string', 'max:20', Rule::unique('users', 'document_number')->ignore($user?->id)];
-        }
+        /** @var \App\Models\User|null $user */
+        $user    = $this->route('user');
+        $docType = (string) $this->input('document_type', '');
 
         $rules = [
-            'first_name' => ['required', 'string', 'max:120'],
-            'last_name' => ['required', 'string', 'max:120'],
-            'document_type' => ['required', 'string', 'max:20', 'in:dni,ce,pasaporte,ruc'],
-            'document_number' => $documentNumberRules,
-            'username' => [
-                'required',
-                'string',
-                'max:255',
-                'regex:/^[a-z0-9_.-]+$/',
+            'first_name'      => ['required', 'string', 'max:120'],
+            'last_name'       => ['required', 'string', 'max:120'],
+            'document_type'   => ['required', 'string', 'in:'.implode(',', self::DOCUMENT_TYPES)],
+            'document_number' => $this->documentNumberRules($docType, $user?->id),
+            'username'        => [
+                'required', 'string', 'max:255', 'regex:/^[a-z0-9_.-]+$/',
                 Rule::unique('users', 'username')->ignore($user?->id),
             ],
             'email' => [
-                'nullable',
-                'string',
-                'email',
-                'max:255',
+                'nullable', 'string', 'email', 'max:255',
                 Rule::unique('users', 'email')->ignore($user?->id),
             ],
-            'phone' => ['nullable', 'string', 'size:9', 'regex:/^9\d{8}$/'],
-            'status' => ['required', 'string', 'in:active,inactive'],
+            'phone'   => $this->phoneRules(),
+            'status'  => ['required', 'string', 'in:active,inactive'],
             'role_id' => ['nullable', 'integer', 'exists:roles,id'],
         ];
 
-        if ($this->isMethod('POST')) {
-            $rules['password'] = ['required', 'string', 'confirmed', Password::defaults()];
-        } else {
-            $rules['password'] = ['nullable', 'string', 'confirmed', Password::defaults()];
-        }
+        $rules['password'] = $this->isMethod('POST')
+            ? ['required', 'string', 'confirmed', Password::defaults()]
+            : ['nullable', 'string', 'confirmed', Password::defaults()];
 
         return $rules;
     }
@@ -82,35 +69,28 @@ class UserRequest extends FormRequest
      */
     public function messages(): array
     {
-        $docType = $this->input('document_type');
-        $docMessages = [
-            'document_number.regex' => $docType === 'ruc'
-                ? 'El RUC debe tener exactamente 11 dígitos numéricos.'
-                : 'El número de documento (DNI) debe tener exactamente 8 dígitos numéricos.',
-            'document_number.size' => $docType === 'ruc'
-                ? 'El RUC debe tener exactamente 11 dígitos.'
-                : 'El número de documento (DNI) debe tener exactamente 8 dígitos.',
-        ];
-        return array_merge($docMessages, [
-            'username.regex' => 'El usuario solo puede contener letras minúsculas, números y los caracteres _ . -',
-            'phone.regex' => 'El celular debe tener 9 dígitos y comenzar con 9.',
-            'phone.size' => 'El celular debe tener exactamente 9 dígitos.',
-        ]);
+        $docType = (string) $this->input('document_type', '');
+
+        return array_merge(
+            $this->documentNumberMessages($docType),
+            $this->phoneMessages(),
+            ['username.regex' => 'El usuario solo puede contener letras minúsculas, números y los caracteres _ . -']
+        );
     }
 
     public function attributes(): array
     {
         return [
-            'first_name' => 'nombre',
-            'last_name' => 'apellido',
-            'document_type' => 'tipo de documento',
+            'first_name'      => 'nombre',
+            'last_name'       => 'apellido',
+            'document_type'   => 'tipo de documento',
             'document_number' => 'número de documento',
-            'username' => 'usuario',
-            'email' => 'correo',
-            'phone' => 'celular',
-            'status' => 'estado',
-            'password' => 'contraseña',
-            'role_id' => 'rol',
+            'username'        => 'usuario',
+            'email'           => 'correo',
+            'phone'           => 'celular',
+            'status'          => 'estado',
+            'password'        => 'contraseña',
+            'role_id'         => 'rol',
         ];
     }
 }

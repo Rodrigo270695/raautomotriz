@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dashboard\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -31,9 +32,9 @@ Route::get('contacto', function () {
 })->name('contacto');
 
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
-    Route::get('/', function () {
-        return Inertia::render('dashboard');
-    })->middleware('permission:dashboard.view')->name('index');
+    Route::get('/', [DashboardController::class, 'index'])
+        ->middleware('permission:dashboard.view')
+        ->name('index');
 
     // Usuarios (listado): redirige al índice de users
     Route::get('usuarios', fn () => redirect()->route('dashboard.users.index'))->name('usuarios');
@@ -202,6 +203,15 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
         Route::delete('packages/{service_package}/items/{item}', [\App\Http\Controllers\Dashboard\Services\ServicePackageItemController::class, 'destroy'])
             ->middleware('permission:service_package_items.delete')
             ->name('packages.items.destroy');
+        Route::get('work-orders/search-clients', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'searchClients'])
+            ->middleware('permission:work_orders.view')
+            ->name('work-orders.search-clients');
+        Route::get('work-orders/search-vehicles', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'searchVehicles'])
+            ->middleware('permission:work_orders.view')
+            ->name('work-orders.search-vehicles');
+        Route::get('work-orders/export', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'export'])
+            ->middleware('permission:work_orders.export')
+            ->name('work-orders.export');
         Route::get('work-orders', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'index'])
             ->middleware('permission:work_orders.view')
             ->name('work-orders.index');

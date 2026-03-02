@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Dashboard\Services;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\Services\WorkOrderPaymentRequest;
+use App\Jobs\SendPaymentNotificationJob;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderPayment;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -45,7 +47,11 @@ class WorkOrderPaymentController extends Controller
                 ->withInput();
         }
 
-        $paidAt = ! empty($data['paid_at']) ? $data['paid_at'] : null;
+        // El input datetime-local llega en hora local de Perú → convertir a UTC para almacenar.
+        $localTz = config('app.local_timezone', 'America/Lima');
+        $paidAt = ! empty($data['paid_at'])
+            ? Carbon::parse($data['paid_at'], $localTz)->setTimezone('UTC')
+            : now();
 
         $nextNum = $work_order->payments()->count() + 1;
         $reference = 'PAG-'.$work_order->id.'-'.str_pad((string) $nextNum, 4, '0', STR_PAD_LEFT);
@@ -58,7 +64,7 @@ class WorkOrderPaymentController extends Controller
             'is_initial_advance' => $isInitialAdvance,
             'amount' => $data['amount'],
             'payment_method' => $data['payment_method'] ?? null,
-            'paid_at' => $paidAt ?? now(),
+            'paid_at' => $paidAt,
             'reference' => $data['reference'] ?? $reference,
             'notes' => $data['notes'] ?? null,
         ]);
@@ -66,6 +72,8 @@ class WorkOrderPaymentController extends Controller
         if ($isInitialAdvance) {
             $work_order->update(['advance_payment_amount' => (float) $data['amount']]);
         }
+
+        SendPaymentNotificationJob::dispatch($work_order->id, $payment->id);
 
         $printUrl = route('dashboard.services.work-orders.payments.print', [
             'work_order' => $work_order->id,
@@ -96,7 +104,10 @@ class WorkOrderPaymentController extends Controller
                 ->withInput();
         }
 
-        $paidAt = ! empty($data['paid_at']) ? $data['paid_at'] : $payment->paid_at;
+        $localTz = config('app.local_timezone', 'America/Lima');
+        $paidAt = ! empty($data['paid_at'])
+            ? Carbon::parse($data['paid_at'], $localTz)->setTimezone('UTC')
+            : $payment->paid_at;
 
         $payment->update([
             'type' => $data['type'],

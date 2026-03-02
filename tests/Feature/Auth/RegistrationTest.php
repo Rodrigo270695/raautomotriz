@@ -18,15 +18,20 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register()
     {
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'cliente', 'guard_name' => 'web']);
+
         $response = $this->post(route('register.store'), [
-            'name' => 'Test User',
-            'usuario' => 'testuser',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'first_name'            => 'Test',
+            'last_name'             => 'User',
+            'document_type'         => 'dni',
+            'document_number'       => '12345678',
+            'email'                 => 'test@example.com',
+            'phone'                 => '987654321',
+            'password'              => 'Password1!',
+            'password_confirmation' => 'Password1!',
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect('/dashboard');
     }
 }

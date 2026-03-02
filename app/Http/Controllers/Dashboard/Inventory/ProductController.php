@@ -9,8 +9,11 @@ use App\Models\InventoryBrand;
 use App\Models\InventoryType;
 use App\Models\Keyword;
 use App\Models\Product;
+use App\Repositories\ProductRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,52 +22,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ProductRepository $repository) {}
+
     public function index(Request $request): Response
     {
-        $query = Product::query()
-            ->with([
-                'inventoryBrand:id,name,inventory_type_id',
-                'inventoryBrand.inventoryType:id,name',
-                'keywords:id,name',
-                'createdBy:id,first_name,last_name',
-                'updatedBy:id,first_name,last_name',
-            ]);
-
-        $search = $request->input('search');
-        if ($search !== null && $search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%'.$search.'%')
-                    ->orWhere('description', 'like', '%'.$search.'%')
-                    ->orWhereHas('keywords', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
-                    ->orWhereHas('inventoryBrand', fn ($q) => $q->where('name', 'like', '%'.$search.'%'));
-            });
-        }
-
-        $filterStatus = $request->input('filter_status', 'all');
-        if ($filterStatus === 'active') {
-            $query->where('status', 'active');
-        } elseif ($filterStatus === 'inactive') {
-            $query->where('status', 'inactive');
-        }
-
-        $filterTypeId = $request->input('filter_type_id');
-        if ($filterTypeId !== null && $filterTypeId !== '') {
-            $query->whereHas('inventoryBrand', fn ($q) => $q->where('inventory_type_id', (int) $filterTypeId));
-        }
-
-        $filterBrandId = $request->input('filter_brand_id');
-        if ($filterBrandId !== null && $filterBrandId !== '') {
-            $query->where('inventory_brand_id', (int) $filterBrandId);
-        }
-
-        $sortBy = $request->input('sort_by', 'name');
-        $sortDir = $request->input('sort_dir', 'asc');
-        $allowedSort = ['name', 'sale_price', 'purchase_price', 'stock', 'status', 'created_at'];
-        if (in_array($sortBy, $allowedSort, true) && in_array($sortDir, ['asc', 'desc'], true)) {
-            $query->orderBy($sortBy, $sortDir);
-        } else {
-            $query->orderBy('name');
-        }
+        $query = $this->repository->filteredQuery($request);
 
         $products = $query->paginate($request->input('per_page', 10))
             ->withQueryString();
@@ -104,13 +66,13 @@ class ProductController extends Controller
         $response = Inertia::render('inventory/products/index', [
             'products' => $products,
             'filters' => [
-                'search' => $search,
+                'search' => $request->input('search'),
                 'per_page' => $request->input('per_page', 10),
-                'sort_by' => $sortBy,
-                'sort_dir' => $sortDir,
-                'filter_status' => $filterStatus,
-                'filter_type_id' => $filterTypeId,
-                'filter_brand_id' => $filterBrandId,
+                'sort_by' => $request->input('sort_by', 'name'),
+                'sort_dir' => $request->input('sort_dir', 'asc'),
+                'filter_status' => $request->input('filter_status', 'all'),
+                'filter_type_id' => $request->input('filter_type_id'),
+                'filter_brand_id' => $request->input('filter_brand_id'),
             ],
             'productsIndexPath' => $productsIndexPath,
             'inventoryTypesForSelect' => $inventoryTypesForSelect,
@@ -146,24 +108,30 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request, InventoryBrand $inventory_brand): RedirectResponse
     {
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('products', 'public');
-        }
+        $product = DB::transaction(function () use ($request, $inventory_brand) {
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('products', 'public');
+            }
 
-        $product = $inventory_brand->products()->create([
-            'name' => $request->validated('name'),
-            'description' => $request->validated('description'),
-            'sale_price' => $request->validated('sale_price'),
-            'purchase_price' => $request->validated('purchase_price'),
-            'stock' => (int) $request->validated('stock'),
-            'image' => $imagePath,
-            'status' => $request->validated('status'),
-            'created_by_id' => $request->user()?->id,
-            'updated_by_id' => $request->user()?->id,
-        ]);
+            $product = $inventory_brand->products()->create([
+                'name'           => $request->validated('name'),
+                'description'    => $request->validated('description'),
+                'sale_price'     => $request->validated('sale_price'),
+                'purchase_price' => $request->validated('purchase_price'),
+                'stock'          => (int) $request->validated('stock'),
+                'image'          => $imagePath,
+                'status'         => $request->validated('status'),
+                'created_by_id'  => $request->user()?->id,
+                'updated_by_id'  => $request->user()?->id,
+            ]);
 
-        $this->syncKeywords($product, $request->validated('keywords') ?? []);
+            $this->syncKeywords($product, $request->validated('keywords') ?? []);
+
+            return $product;
+        });
+
+        Cache::forget('products_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Producto creado correctamente.']);
@@ -195,6 +163,7 @@ class ProductController extends Controller
         $product->update($data);
 
         $this->syncKeywords($product, $request->validated('keywords') ?? []);
+        Cache::forget('products_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Producto actualizado correctamente.']);
@@ -207,6 +176,7 @@ class ProductController extends Controller
         }
 
         $product->delete();
+        Cache::forget('products_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Producto eliminado correctamente.']);

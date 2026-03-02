@@ -9,6 +9,7 @@ use App\Models\ServicePackage;
 use App\Models\ServicePackageItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -75,6 +76,7 @@ class ServicePackageItemController extends Controller
         $data['type'] = 'product';
 
         ServicePackageItem::create($data);
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Ítem agregado al paquete correctamente.']);
@@ -90,6 +92,7 @@ class ServicePackageItemController extends Controller
         $data['type'] = 'product';
 
         $item->update($data);
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Ítem del paquete actualizado correctamente.']);
@@ -102,6 +105,7 @@ class ServicePackageItemController extends Controller
         }
 
         $item->delete();
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Ítem del paquete eliminado correctamente.']);

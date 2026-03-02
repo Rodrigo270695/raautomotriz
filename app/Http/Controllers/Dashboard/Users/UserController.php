@@ -115,7 +115,7 @@ class UserController extends Controller
 
     public function update(UserRequest $request, User $user): RedirectResponse
     {
-        if ($user->username === 'superadmin') {
+        if ($user->hasRole('superadmin')) {
             return redirect()->back()
                 ->with('flash', ['type' => 'error', 'message' => 'No se puede editar el usuario superadmin.']);
         }
@@ -150,7 +150,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        if ($user->username === 'superadmin') {
+        if ($user->hasRole('superadmin')) {
             return redirect()->back()
                 ->with('flash', ['type' => 'error', 'message' => 'No se puede eliminar el usuario superadmin.']);
         }

@@ -14,15 +14,24 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            // 1. Roles y permisos (siempre primero)
             RoleSeeder::class,
             RolesPermissionSeeder::class,
-            SuperadminUserSeeder::class,
-        ]);
 
-        // User::factory(10)->create();
-        // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+            // 2. Usuario superadmin
+            SuperadminUserSeeder::class,
+
+            // 3. Marcas y modelos de vehículos + clientes con vehículos asignados
+            VehicleSeeder::class,
+
+            // 4. Tipos, marcas y productos de inventario
+            InventorySeeder::class,
+
+            // 5. Lista de chequeo de recepción de vehículo
+            ServiceChecklistSeeder::class,
+
+            // 6. Tipos y paquetes de servicio (depende de InventorySeeder para los productos)
+            ServicePackageSeeder::class,
+        ]);
     }
 }

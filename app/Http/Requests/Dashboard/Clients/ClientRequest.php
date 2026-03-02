@@ -47,7 +47,7 @@ class ClientRequest extends FormRequest
             'document_number' => $documentNumberRules,
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user?->id)],
             'email' => [
-                'required',
+                'nullable',
                 'string',
                 'email',
                 'max:255',

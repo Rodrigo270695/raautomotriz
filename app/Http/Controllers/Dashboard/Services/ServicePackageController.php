@@ -8,6 +8,7 @@ use App\Models\ServicePackage;
 use App\Models\ServiceType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -112,6 +113,7 @@ class ServicePackageController extends Controller
         $data['sort_order'] = $nextSortOrder;
 
         ServicePackage::create($data);
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Paquete de servicio creado correctamente.']);
@@ -125,6 +127,7 @@ class ServicePackageController extends Controller
         $data['sort_order'] = (int) ($data['sort_order'] ?? $package->sort_order ?? 0);
 
         $package->update($data);
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Paquete de servicio actualizado correctamente.']);
@@ -133,6 +136,7 @@ class ServicePackageController extends Controller
     public function destroy(ServicePackage $package): RedirectResponse
     {
         $package->delete();
+        Cache::forget('packages_for_select');
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Paquete de servicio eliminado correctamente.']);

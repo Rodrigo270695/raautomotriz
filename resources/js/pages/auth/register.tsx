@@ -210,12 +210,12 @@ export default function Register() {
                             {/* Fila 3: Correo y Celular */}
                             <div className="grid gap-1.5 sm:gap-2">
                                 <Label htmlFor="email" className={ra.label}>
-                                    Correo <span className={raRequiredAsterisk}>*</span>
+                                    Correo{' '}
+                                    <span className="text-xs font-normal opacity-60">(opcional)</span>
                                 </Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    required
                                     tabIndex={5}
                                     autoComplete="email"
                                     name="email"
