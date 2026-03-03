@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamp('surveyed_at')->nullable(); // Cuándo se realizó la encuesta
             $table->foreignId('surveyed_by')->nullable()->constrained('users')->nullOnDelete(); // Técnico/recepción que la registró
             $table->timestamps();
-        });
+        }); 
     }
 
     /**

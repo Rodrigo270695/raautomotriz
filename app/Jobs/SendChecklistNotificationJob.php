@@ -88,36 +88,63 @@ class SendChecklistNotificationJob implements ShouldQueue
             report($e);
         }
 
-        $nombre = trim($client->first_name ?? '');
-        $saludo = $nombre !== '' ? "Estimado/a {$nombre}," : 'Estimado/a cliente,';
+        $nombre       = trim($client->first_name ?? '');
+        $saludo       = $nombre !== '' ? "Estimado/a {$nombre}," : 'Estimado/a cliente,';
+        $saludoNombre = $nombre !== '' ? ", {$nombre}" : '';
+        $empresa      = config('app.company_name', 'RA Automotriz S.A.C.');
 
-        $empresa = config('app.company_name', 'RA Automotriz S.A.C.');
+        $totalItems = count($checklistRows);
+        $okItems    = count(array_filter($checklistRows, fn ($r) => $r['checked']));
+        $resumen    = $totalItems > 0 ? "{$okItems}/{$totalItems} ítems en buen estado" : '';
 
         if (! $this->isUpdate) {
-            $mensajeCuerpo = "Le informamos que hemos realizado el chequeo de ingreso de su vehículo en {$empresa}.\n\n"
-                ."{$saludo}\n\n"
-                .'Nuestro equipo completó la lista de verificación y hemos registrado el estado de cada ítem. '
-                ."En este correo encontrará el detalle en PDF y las fotos de ingreso de su unidad.\n\n"
-                .'Si tiene alguna consulta, no dude en contactarnos. ¡Gracias por confiar en nosotros!';
+            // ── Primera entrega del checklist ──────────────────────────
+            $mensajeWhatsApp = "🔧 *{$empresa}*\n\n"
+                ."✅ *¡Chequeo de ingreso completado{$saludoNombre}!*\n\n"
+                ."Hemos revisado su vehículo y completado la lista de verificación:\n\n"
+                ."🚗 *Vehículo:* {$vehicleLabel}\n"
+                ."🔢 *Orden N.°:* #{$workOrder->id}\n"
+                .($resumen !== '' ? "📋 *Resultado:* {$resumen}\n" : '')
+                ."📸 *Fotos de ingreso:* registradas\n\n"
+                ."Le enviamos el detalle completo en PDF adjunto junto con las fotos de ingreso.\n\n"
+                ."¡Seguimos trabajando en su vehículo! 🔩";
 
-            $mensajeWhatsApp = "{$empresa}\n\n"
-                ."Le informamos que hemos realizado el chequeo de ingreso de su vehículo y completado la lista de chequeo.\n\n"
-                ."Le hemos enviado el detalle completo en un documento PDF junto con las fotos de ingreso de su unidad.\n\n"
-                ."\n\nGracias por confiar en nosotros.";
+            $mensajeCuerpo = "{$saludo}\n\n"
+                ."Le informamos que hemos completado el chequeo de ingreso de su vehículo en {$empresa}.\n\n"
+                ."━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                ."Vehículo  : {$vehicleLabel}\n"
+                ."Orden N.° : #{$workOrder->id}\n"
+                .($resumen !== '' ? "Resultado : {$resumen}\n" : '')
+                ."━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                ."Adjunto encontrará el documento PDF con el detalle completo del chequeo "
+                ."y las fotos de ingreso de su unidad.\n\n"
+                ."Si tiene alguna consulta, no dude en contactarnos.\n\n"
+                ."¡Gracias por confiar en nosotros!";
 
-            $asunto = "Chequeo realizado – Su vehículo fue revisado | {$empresa}";
+            $asunto = "✅ Chequeo completado – Orden #{$workOrder->id} | {$empresa}";
         } else {
-            $mensajeCuerpo = "Le informamos que hemos actualizado la lista de chequeo de ingreso de su vehículo en {$empresa}.\n\n"
-                ."{$saludo}\n\n"
-                ."Adjuntamos el documento PDF con la versión actualizada del chequeo, donde se reflejan los cambios realizados.\n\n"
-                .'Si tiene alguna consulta, no dude en contactarnos. ¡Gracias por confiar en nosotros!';
+            // ── Actualización del checklist ────────────────────────────
+            $mensajeWhatsApp = "🔧 *{$empresa}*\n\n"
+                ."🔄 *Lista de chequeo actualizada{$saludoNombre}*\n\n"
+                ."Hemos realizado cambios en la lista de verificación de su vehículo:\n\n"
+                ."🚗 *Vehículo:* {$vehicleLabel}\n"
+                ."🔢 *Orden N.°:* #{$workOrder->id}\n"
+                .($resumen !== '' ? "📋 *Resultado actualizado:* {$resumen}\n" : '')
+                ."\nLe enviamos el PDF con el detalle actualizado adjunto.\n\n"
+                ."¡Seguimos a su disposición! 🔩";
 
-            $mensajeWhatsApp = "{$empresa}\n\n"
-                ."Hemos actualizado la lista de chequeo de ingreso de su vehículo.\n\n"
-                ."Le enviamos el documento PDF con el detalle actualizado del chequeo.\n\n"
-                .'Gracias por confiar en nosotros.';
+            $mensajeCuerpo = "{$saludo}\n\n"
+                ."Le informamos que hemos actualizado la lista de chequeo de su vehículo.\n\n"
+                ."━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                ."Vehículo  : {$vehicleLabel}\n"
+                ."Orden N.° : #{$workOrder->id}\n"
+                .($resumen !== '' ? "Resultado : {$resumen}\n" : '')
+                ."━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                ."Adjunto encontrará el PDF con la versión actualizada del chequeo.\n\n"
+                ."Si tiene alguna consulta, no dude en contactarnos.\n\n"
+                ."¡Gracias por confiar en nosotros!";
 
-            $asunto = 'Actualización de lista de chequeo – Orden #'.$workOrder->id;
+            $asunto = "🔄 Chequeo actualizado – Orden #{$workOrder->id} | {$empresa}";
         }
 
         $attachments = $this->isUpdate

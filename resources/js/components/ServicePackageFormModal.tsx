@@ -46,6 +46,8 @@ export function ServicePackageFormModal({
         service_type_id: pkg?.service_type_id ?? '',
         status: (pkg?.status as 'active' | 'inactive') ?? 'active',
         sort_order: String(pkg?.sort_order ?? nextSortOrder),
+        interval_km: String(pkg?.interval_km ?? ''),
+        interval_days: String(pkg?.interval_days ?? ''),
     });
 
     const canSubmit =
@@ -60,6 +62,8 @@ export function ServicePackageFormModal({
                 service_type_id: pkg?.service_type_id ?? (serviceTypesForSelect[0]?.id ?? ''),
                 status: (pkg?.status as 'active' | 'inactive') ?? 'active',
                 sort_order: String(pkg?.sort_order ?? nextSortOrder),
+                interval_km: String(pkg?.interval_km ?? ''),
+                interval_days: String(pkg?.interval_days ?? ''),
             });
         }
     }, [open, pkg, serviceTypesForSelect, nextSortOrder, setData]);
@@ -181,6 +185,55 @@ export function ServicePackageFormModal({
                             <p className="text-sm text-destructive">{errors.sort_order}</p>
                         )}
                     </div>
+                    {/* Recordatorio de mantenimiento */}
+                    <div className="rounded-lg border border-content-border bg-content-muted/20 p-3 space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Recordatorio de mantenimiento
+                            <span className="ml-1 font-normal normal-case">(opcional)</span>
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pkg-interval-km" className="text-foreground text-sm">
+                                    Repetir cada (km)
+                                </Label>
+                                <Input
+                                    id="pkg-interval-km"
+                                    type="number"
+                                    min={100}
+                                    step={1}
+                                    value={data.interval_km}
+                                    onChange={(e) => setData('interval_km', e.target.value)}
+                                    placeholder="ej. 5000"
+                                    className="border-content-border focus-visible:ring-(--sidebar-accent)"
+                                />
+                                {errors.interval_km && (
+                                    <p className="text-xs text-destructive">{errors.interval_km}</p>
+                                )}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="pkg-interval-days" className="text-foreground text-sm">
+                                    Repetir cada (días)
+                                </Label>
+                                <Input
+                                    id="pkg-interval-days"
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={data.interval_days}
+                                    onChange={(e) => setData('interval_days', e.target.value)}
+                                    placeholder="ej. 90"
+                                    className="border-content-border focus-visible:ring-(--sidebar-accent)"
+                                />
+                                {errors.interval_days && (
+                                    <p className="text-xs text-destructive">{errors.interval_days}</p>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Al entregar una orden con este paquete, el sistema calculará automáticamente cuándo toca el próximo servicio y avisará al cliente.
+                        </p>
+                    </div>
+
                     <div className="space-y-2">
                         <Label className="text-foreground">Estado</Label>
                         <div className="flex items-center gap-2 pt-1">

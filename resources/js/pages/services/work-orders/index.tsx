@@ -1,6 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { Calendar, FileSpreadsheet, FileText, LayoutGrid, Plus, Inbox, Wrench, ClipboardList, Settings } from 'lucide-react';
+import { Calendar, CheckCircle2, Eye, FileSpreadsheet, FileText, Gauge, LayoutGrid, Plus, Inbox, Wrench, ClipboardList, Settings, FileDown } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, WorkOrder, PaginatedResponse } from '@/types';
 import { DataTable } from '@/components/data-table';
@@ -78,7 +86,7 @@ type WorkOrdersIndexProps = {
         total_work_orders: number;
         total_ingreso: number;
     };
-    can: { create: boolean; update: boolean; delete: boolean; view_photos?: boolean; export?: boolean };
+    can: { create: boolean; update: boolean; delete: boolean; view_photos?: boolean; export?: boolean; view_summary?: boolean; print_summary?: boolean };
     exportUrl?: string | null;
 };
 
@@ -93,6 +101,10 @@ export default function WorkOrdersIndex({
     const [formOpen, setFormOpen] = useState(false);
     const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
     const [deleteWorkOrder, setDeleteWorkOrder] = useState<WorkOrder | null>(null);
+    const [deliverOrder, setDeliverOrder] = useState<WorkOrder | null>(null);
+    const [delivering, setDelivering] = useState(false);
+    const [exitMileage, setExitMileage] = useState<string>('');
+    const [nextDueDays, setNextDueDays] = useState<string>('');
     const [isNavigating, setIsNavigating] = useState(false);
     const indexPath = workOrdersIndexPath;
 
@@ -116,6 +128,42 @@ export default function WorkOrdersIndex({
     const closeForm = (open: boolean) => {
         if (!open) setEditingWorkOrder(null);
         setFormOpen(open);
+    };
+
+    const openDeliverDialog = (order: WorkOrder) => {
+        setExitMileage(order.exit_mileage ? String(order.exit_mileage) : '');
+        // Pre-llenar con los días mínimos del paquete de servicio
+        setNextDueDays(order.min_interval_days ? String(order.min_interval_days) : '');
+        setDeliverOrder(order);
+    };
+
+    const closeDeliverDialog = () => {
+        setDeliverOrder(null);
+        setExitMileage('');
+        setNextDueDays('');
+    };
+
+    const estimatedNextDate = (() => {
+        const days = parseInt(nextDueDays, 10);
+        if (!days || days <= 0) return null;
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+    })();
+
+    const handleMarkDelivered = () => {
+        if (!deliverOrder?.mark_deliver_path) return;
+        setDelivering(true);
+        router.post(deliverOrder.mark_deliver_path, {
+            exit_mileage: exitMileage !== '' ? exitMileage : null,
+            next_due_days: nextDueDays !== '' ? nextDueDays : null,
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setDelivering(false);
+                closeDeliverDialog();
+            },
+        });
     };
 
     const sortBy = filters.sort_by ?? 'entry_date';
@@ -198,10 +246,10 @@ export default function WorkOrdersIndex({
                 return (
                     <span className="text-foreground text-sm tabular-nums">
                         <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                            S/ {formatCurrency(paid)}
+                            {formatCurrency(paid)}
                         </span>
                         <span className="text-muted-foreground"> / </span>
-                        <span className="font-medium">S/ {formatCurrency(total)}</span>
+                        <span className="font-medium">{formatCurrency(total)}</span>
                     </span>
                 );
             },
@@ -212,30 +260,88 @@ export default function WorkOrdersIndex({
             className: 'w-[120px] text-right',
             render: (r: WorkOrder) => (
                 <div className="flex items-center justify-end gap-2">
-                    {(r.can_edit ?? false) && (
+                    {/* Listo para entregar: botón de entrega */}
+                    {(r.can_mark_delivered ?? false) && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="cursor-pointer shrink-0 text-violet-500 hover:bg-violet-50 hover:text-violet-600 dark:text-violet-400/80 dark:hover:bg-violet-900/20 dark:hover:text-violet-300"
-                                    asChild
+                                    className="cursor-pointer shrink-0 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                                    onClick={() => openDeliverDialog(r)}
                                 >
-                                    <Link href={`${workOrdersIndexPath}/${r.id}/config`} aria-label="Configuración">
-                                        <Settings className="size-4" />
-                                    </Link>
+                                    <CheckCircle2 className="size-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Configuración</TooltipContent>
+                            <TooltipContent>Marcar como entregado</TooltipContent>
                         </Tooltip>
                     )}
-                    <ActionButtons
-                        canEdit={r.can_edit ?? false}
-                        canDelete={r.can_delete ?? false}
-                        onEdit={() => openEdit(r)}
-                        onDelete={() => setDeleteWorkOrder(r)}
-                        deleteUrl={r.can_delete ? `${workOrdersIndexPath}/${r.id}` : undefined}
-                    />
+                    {/* Orden entregada: botones de resumen y PDF */}
+                    {r.status === 'entregado' ? (
+                        <div className="flex items-center gap-1">
+                            {(r.can_view_summary ?? false) && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="cursor-pointer shrink-0 text-sky-500 hover:bg-sky-50 hover:text-sky-600 dark:text-sky-400/80 dark:hover:bg-sky-900/20 dark:hover:text-sky-300"
+                                            asChild
+                                        >
+                                            <Link href={`${workOrdersIndexPath}/${r.id}`} aria-label="Ver resumen">
+                                                <Eye className="size-4" />
+                                            </Link>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Ver resumen</TooltipContent>
+                                </Tooltip>
+                            )}
+                            {(r.can_print_summary ?? false) && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="cursor-pointer shrink-0 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
+                                            asChild
+                                        >
+                                            <a href={`${workOrdersIndexPath}/${r.id}/summary/pdf`} target="_blank" rel="noopener noreferrer" aria-label="Descargar PDF resumen">
+                                                <FileDown className="size-4" />
+                                            </a>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Descargar PDF resumen</TooltipContent>
+                                </Tooltip>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            {(r.can_edit ?? false) && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="cursor-pointer shrink-0 text-violet-500 hover:bg-violet-50 hover:text-violet-600 dark:text-violet-400/80 dark:hover:bg-violet-900/20 dark:hover:text-violet-300"
+                                            asChild
+                                        >
+                                            <Link href={`${workOrdersIndexPath}/${r.id}/config`} aria-label="Configuración">
+                                                <Settings className="size-4" />
+                                            </Link>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Configuración</TooltipContent>
+                                </Tooltip>
+                            )}
+                            <ActionButtons
+                                canEdit={r.can_edit ?? false}
+                                canDelete={r.can_delete ?? false}
+                                onEdit={() => openEdit(r)}
+                                onDelete={() => setDeleteWorkOrder(r)}
+                                deleteUrl={r.can_delete ? `${workOrdersIndexPath}/${r.id}` : undefined}
+                            />
+                        </>
+                    )}
                 </div>
             ),
         },
@@ -433,32 +539,55 @@ export default function WorkOrdersIndex({
                                         <DataTableCard
                                             title={vehicleLabel(item)}
                                             actions={
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {(item.can_edit ?? false) && (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="cursor-pointer shrink-0 text-violet-500 hover:bg-violet-50 hover:text-violet-600 dark:text-violet-400/80 dark:hover:bg-violet-900/20 dark:hover:text-violet-300"
-                                                                    asChild
-                                                                >
-                                                                    <Link href={`${workOrdersIndexPath}/${item.id}/config`} aria-label="Configuración">
-                                                                        <Settings className="size-4" />
-                                                                    </Link>
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Configuración</TooltipContent>
-                                                        </Tooltip>
-                                                    )}
-                                                    <ActionButtons
-                                                        canEdit={item.can_edit ?? false}
-                                                        canDelete={item.can_delete ?? false}
-                                                        onEdit={() => openEdit(item)}
-                                                        onDelete={() => setDeleteWorkOrder(item)}
-                                                        deleteUrl={item.can_delete ? `${workOrdersIndexPath}/${item.id}` : undefined}
-                                                    />
-                                                </div>
+                                                item.status === 'entregado' ? (
+                                                    <div className="flex items-center gap-2 justify-end flex-wrap">
+                                                        {(item.can_view_summary ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-700 dark:border-sky-800 dark:text-sky-400 dark:hover:bg-sky-950/40" asChild>
+                                                                <Link href={`${workOrdersIndexPath}/${item.id}`}>
+                                                                    <Eye className="size-4 mr-1" />
+                                                                    Ver resumen
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                        {(item.can_print_summary ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/30" asChild>
+                                                                <a href={`${workOrdersIndexPath}/${item.id}/summary/pdf`} target="_blank" rel="noopener noreferrer">
+                                                                    <FileDown className="size-4 mr-1" />
+                                                                    PDF
+                                                                </a>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                                                        {(item.can_mark_delivered ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40" onClick={() => openDeliverDialog(item)}>
+                                                                <CheckCircle2 className="size-3.5 mr-1" />
+                                                                Entregar
+                                                            </Button>
+                                                        )}
+                                                        {(item.can_edit ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-violet-200 text-violet-600 hover:bg-violet-50 hover:text-violet-700 dark:border-violet-800 dark:text-violet-400 dark:hover:bg-violet-950/40" asChild>
+                                                                <Link href={`${workOrdersIndexPath}/${item.id}/config`}>
+                                                                    <Settings className="size-3.5 mr-1" />
+                                                                    Configurar
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                        {(item.can_edit ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/40" onClick={() => openEdit(item)}>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                                                Editar
+                                                            </Button>
+                                                        )}
+                                                        {(item.can_delete ?? false) && (
+                                                            <Button variant="outline" size="sm" className="cursor-pointer shrink-0 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950/40" onClick={() => setDeleteWorkOrder(item)}>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                                                Eliminar
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )
                                             }
                                             fields={[
                                                 { label: 'Cliente', value: clientLabel(item) },
@@ -468,8 +597,8 @@ export default function WorkOrdersIndex({
                                                 label: 'Total',
                                                 value:
                                                     (item.total_paid ?? 0) > 0
-                                                        ? `S/ ${formatCurrency(item.total_paid ?? 0)} abonado / S/ ${formatCurrency(item.total_amount)} total`
-                                                        : `S/ ${formatCurrency(item.total_amount)}`,
+                                                        ? `${formatCurrency(item.total_paid ?? 0)} abonado / ${formatCurrency(item.total_amount)} total`
+                                                        : formatCurrency(item.total_amount),
                                             },
                                             ]}
                                         />
@@ -527,6 +656,108 @@ export default function WorkOrdersIndex({
                 workOrder={deleteWorkOrder}
                 workOrdersIndexPath={workOrdersIndexPath}
             />
+
+            {/* Dialog: confirmar entrega */}
+            <Dialog open={!!deliverOrder} onOpenChange={(open) => !open && closeDeliverDialog()}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CheckCircle2 className="size-5 text-emerald-500" />
+                            Confirmar entrega
+                        </DialogTitle>
+                        <DialogDescription>
+                            Registra los datos de salida del vehículo para programar el próximo mantenimiento.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deliverOrder && (
+                        <div className="flex flex-col gap-4">
+                            {/* Datos de la orden */}
+                            <div className="rounded-lg border border-content-border bg-content-muted/30 p-3 text-sm space-y-1.5">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Vehículo</span>
+                                    <span className="font-medium text-foreground">{vehicleLabel(deliverOrder)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Cliente</span>
+                                    <span className="text-foreground">{clientLabel(deliverOrder)}</span>
+                                </div>
+                                {(deliverOrder.entry_mileage ?? 0) > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Km de ingreso</span>
+                                        <span className="text-foreground tabular-nums">{Number(deliverOrder.entry_mileage).toLocaleString()} km</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Campos de datos de salida */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                                        <Gauge className="size-4 text-muted-foreground" />
+                                        Km de salida
+                                        <span className="text-xs font-normal text-muted-foreground">(opc.)</span>
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        placeholder="Ej. 85000"
+                                        value={exitMileage}
+                                        onChange={(e) => setExitMileage(e.target.value)}
+                                        className="h-9"
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                                        <Calendar className="size-4 text-muted-foreground" />
+                                        Próximo en días
+                                        <span className="text-xs font-normal text-muted-foreground">(opc.)</span>
+                                    </label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        step={1}
+                                        placeholder="Ej. 90"
+                                        value={nextDueDays}
+                                        onChange={(e) => setNextDueDays(e.target.value)}
+                                        className="h-9"
+                                    />
+                                </div>
+                            </div>
+                            {estimatedNextDate && (
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 rounded-md px-3 py-2">
+                                    Próximo mantenimiento estimado: <strong>{estimatedNextDate}</strong>
+                                </p>
+                            )}
+                            {deliverOrder?.min_interval_km && (
+                                <p className="text-xs text-muted-foreground">
+                                    Intervalo de km del paquete: <strong>{Number(deliverOrder.min_interval_km).toLocaleString()} km</strong>
+                                    {' '}— se calculará al ingresar el km de salida.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <Button
+                            variant="outline"
+                            className="cursor-pointer w-full sm:w-auto"
+                            onClick={closeDeliverDialog}
+                            disabled={delivering}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            className="cursor-pointer w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={handleMarkDelivered}
+                            disabled={delivering}
+                        >
+                            {delivering ? 'Procesando...' : 'Confirmar entrega'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

@@ -1,7 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Car, Folder, LayoutGrid, Package, Users, Wrench } from 'lucide-react';
+import { Car, LayoutGrid, Megaphone, Package, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -15,6 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
+
 import { index as dashboardRoute } from '@/routes/dashboard';
 
 /** Permisos que controlan cada ítem del menú (igual que AssignPermissionsModal) */
@@ -30,6 +30,9 @@ const SERVICE_CHECKLISTS_PERMISSION = 'service_checklists.view';
 const SERVICE_TYPES_PERMISSION = 'service_types.view';
 const SERVICE_PACKAGES_PERMISSION = 'service_packages.view';
 const WORK_ORDERS_PERMISSION = 'work_orders.view';
+const ACCOUNTS_RECEIVABLE_PERMISSION = 'accounts_receivable.view';
+const MAINTENANCE_SCHEDULES_PERMISSION = 'maintenance_schedules.view';
+const PROMOTIONS_PERMISSION = 'promotions.view';
 
 const ALL_MAIN_NAV_ITEMS: NavItem[] = [
     {
@@ -79,20 +82,18 @@ const ALL_MAIN_NAV_ITEMS: NavItem[] = [
             { title: 'Tipo de servicio', href: '/dashboard/services/types', permission: SERVICE_TYPES_PERMISSION },
             { title: 'Paquetes de servicio', href: '/dashboard/services/packages', permission: SERVICE_PACKAGES_PERMISSION },
             { title: 'Órdenes de trabajo', href: '/dashboard/services/work-orders', permission: WORK_ORDERS_PERMISSION },
+            { title: 'Cuentas por cobrar', href: '/dashboard/services/accounts-receivable', permission: ACCOUNTS_RECEIVABLE_PERMISSION },
+            { title: 'Recordatorios de mantenimiento', href: '/dashboard/services/maintenance-schedules', permission: MAINTENANCE_SCHEDULES_PERMISSION },
         ],
     },
-];
-
-const footerNavItems: NavItem[] = [
     {
-        title: 'Repositorio',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentación',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Marketing',
+        href: '#',
+        icon: Megaphone,
+        permission: null,
+        items: [
+            { title: 'Promociones', href: '/dashboard/marketing/promotions', permission: PROMOTIONS_PERMISSION },
+        ],
     },
 ];
 
@@ -154,7 +155,6 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

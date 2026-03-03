@@ -111,22 +111,42 @@ class WorkOrderDiagnosisController extends Controller
 
         $textoDiagnostico = trim($diagnosis->diagnosis_text) ?: 'Sin detalle adicional.';
 
-        $mensaje = "RA Automotriz S.A.C.\n\n"
-            . "Le saluda el técnico {$nombreTecnico}.\n\n"
-            . "Estimado/a {$clienteNombre}, con mucho gusto le compartimos el resultado del diagnóstico de su vehículo. Aquí tiene el detalle:\n\n"
-            . "—— Datos del vehículo ——\n"
-            . "Vehículo: {$vehiculoLinea}\n"
-            . "Placa: {$placa}\n"
-            . "Año: {$anio}\n\n"
-            . "—— Este es mi diagnóstico ——\n"
-            . "{$textoDiagnostico}\n\n"
-            . "Fecha y hora del diagnóstico: {$fechaHoraTexto}\n\n"
-            . "Quedamos atentos a cualquier duda o consulta. Gracias por confiar en nosotros. ¡Estamos a su disposición!";
+        $empresa = config('app.company_name', 'RA Automotriz S.A.C.');
+        $saludo  = "Estimado/a {$clienteNombre},";
 
-        $asunto = 'Su diagnóstico está listo | RA Automotriz';
+        $mensajeWhatsApp = "{$empresa}\n\n"
+            . "🔍 *Diagnóstico de su vehículo listo*\n\n"
+            . "{$saludo}\n\n"
+            . "Le informamos que *{$nombreTecnico}* ha registrado el diagnóstico de su vehículo.\n\n"
+            . "🚗 *Datos del vehículo:*\n"
+            . "• Vehículo: {$vehiculoLinea}\n"
+            . "• Placa: *{$placa}*\n"
+            . "• Año: {$anio}\n\n"
+            . "📋 *Diagnóstico:*\n"
+            . "{$textoDiagnostico}\n\n"
+            . "🕐 *Fecha y hora:* {$fechaHoraTexto}\n\n"
+            . "Nos pondremos en contacto con usted para coordinar el servicio a realizar.\n"
+            . "¡Gracias por confiar en nosotros!";
+
+        $mensajeEmail = "{$saludo}\n\n"
+            . "Le comunicamos que *{$nombreTecnico}* ha completado el diagnóstico de su vehículo.\n\n"
+            . "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            . "Vehículo  : {$vehiculoLinea}\n"
+            . "Placa     : {$placa}\n"
+            . "Año       : {$anio}\n"
+            . "Técnico   : {$nombreTecnico}\n"
+            . "Fecha/Hora: {$fechaHoraTexto}\n"
+            . "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            . "DIAGNÓSTICO:\n"
+            . "{$textoDiagnostico}\n\n"
+            . "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            . "Nos comunicaremos con usted para coordinar los siguientes pasos.\n"
+            . "Ante cualquier consulta, estamos a su disposición. ¡Gracias por confiar en nosotros!";
+
+        $asunto = "Diagnóstico listo – Orden #{$work_order->id} | {$empresa}";
 
         $notificationService = app(NotificationService::class);
-        $notificationService->sendEmail($client, $asunto, $mensaje, $work_order);
-        $notificationService->sendWhatsApp($client, $mensaje, $work_order);
+        $notificationService->sendEmail($client, $asunto, $mensajeEmail, $work_order);
+        $notificationService->sendWhatsApp($client, $mensajeWhatsApp, $work_order);
     }
 }

@@ -13,7 +13,13 @@ class WorkOrderRepository
     public function paginatedList(Request $request): LengthAwarePaginator
     {
         $query = WorkOrder::query()
-            ->with(['vehicle:id,plate,vehicle_model_id', 'vehicle.vehicleModel:id,name', 'client:id,first_name,last_name'])
+            ->with([
+                'vehicle:id,plate,vehicle_model_id',
+                'vehicle.vehicleModel:id,name',
+                'client:id,first_name,last_name',
+                'services:id,work_order_id,service_package_id',
+                'services.servicePackage:id,interval_days,interval_km',
+            ])
             ->withSum('payments', 'amount');
 
         $this->applySearch($query, $request->input('search'));

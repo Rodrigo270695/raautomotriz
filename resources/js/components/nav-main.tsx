@@ -18,6 +18,8 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
+const NAVY = '#2d4a6f';
+
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const { isCurrentUrl } = useCurrentUrl();
 
@@ -31,45 +33,46 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                     item.items?.length ? (
                         <Collapsible
                             key={item.title}
-                            defaultOpen={item.items.some((sub) =>
-                                isCurrentUrl(sub.href),
-                            )}
+                            defaultOpen={item.items.some((sub) => isCurrentUrl(sub.href))}
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton
                                         tooltip={{ children: item.title }}
-                                        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                        className="nav-group-trigger transition-colors duration-200"
                                     >
                                         {item.icon ? (
-                                            <item.icon />
+                                            <item.icon className="size-4 shrink-0" />
                                         ) : (
-                                            <UsersIcon className="size-4" />
+                                            <UsersIcon className="size-4 shrink-0" />
                                         )}
                                         <span>{item.title}</span>
-                                        <ChevronDownIcon className="ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                                        <ChevronDownIcon className="ml-auto size-4 shrink-0 transition-transform duration-300 ease-in-out group-data-[state=open]/collapsible:rotate-180" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
-                                <CollapsibleContent>
+
+                                <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                                     <SidebarMenuSub>
-                                        {item.items.map((sub) => (
-                                            <SidebarMenuSubItem key={sub.title}>
-                                                <SidebarMenuSubButton
-                                                    asChild
-                                                    isActive={isCurrentUrl(
-                                                        sub.href,
-                                                    )}
-                                                >
-                                                    <Link
-                                                        href={sub.href}
-                                                        prefetch
+                                        {item.items.map((sub) => {
+                                            const active = isCurrentUrl(sub.href);
+                                            return (
+                                                <SidebarMenuSubItem key={sub.title}>
+                                                    <SidebarMenuSubButton
+                                                        asChild
+                                                        className={
+                                                            active
+                                                                ? 'nav-sub-active'
+                                                                : 'nav-sub-inactive'
+                                                        }
                                                     >
-                                                        <span>{sub.title}</span>
-                                                    </Link>
-                                                </SidebarMenuSubButton>
-                                            </SidebarMenuSubItem>
-                                        ))}
+                                                        <Link href={sub.href} prefetch>
+                                                            <span>{sub.title}</span>
+                                                        </Link>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            );
+                                        })}
                                     </SidebarMenuSub>
                                 </CollapsibleContent>
                             </SidebarMenuItem>
@@ -78,11 +81,15 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                isActive={isCurrentUrl(item.href)}
                                 tooltip={{ children: item.title }}
+                                className={
+                                    isCurrentUrl(item.href)
+                                        ? 'nav-item-active'
+                                        : 'nav-item-inactive'
+                                }
                             >
                                 <Link href={item.href} prefetch>
-                                    {item.icon && <item.icon />}
+                                    {item.icon && <item.icon className="size-4 shrink-0" />}
                                     <span>{item.title}</span>
                                 </Link>
                             </SidebarMenuButton>

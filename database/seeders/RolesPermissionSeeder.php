@@ -78,12 +78,20 @@ class RolesPermissionSeeder extends Seeder
         'work_order_payments.create',
         'work_order_payments.delete',
         'work_order_payments.print_ticket',
+        'work_order_payments.resend_notification',
         'work_order_tickets.print',
+        'accounts_receivable.view',
+        'accounts_receivable.export',
+        'maintenance_schedules.view',
+        'maintenance_schedules.resend_notification',
         'work_orders.view',
         'work_orders.create',
         'work_orders.update',
         'work_orders.delete',
         'work_orders.export',
+        'work_orders.view_summary',
+        'work_orders.print_summary',
+        'work_orders.mark_delivered',
         'work_order_photos.view',
         'work_order_photos.create',
         'work_order_photos.delete',
@@ -94,6 +102,11 @@ class RolesPermissionSeeder extends Seeder
         'work_order_diagnoses.update',
         'work_order_diagnoses.delete',
         'permissions.view',
+        'promotions.view',
+        'promotions.create',
+        'promotions.update',
+        'promotions.delete',
+        'promotions.send_notification',
     ];
 
     /** Permisos que el rol admin puede ejercer (todo excepto gestión de roles y superadmin). */
@@ -111,13 +124,16 @@ class RolesPermissionSeeder extends Seeder
         'service_types.view', 'service_types.create', 'service_types.update', 'service_types.delete',
         'service_packages.view', 'service_packages.create', 'service_packages.update', 'service_packages.delete',
         'service_package_items.view', 'service_package_items.create', 'service_package_items.update', 'service_package_items.delete',
-        'work_orders.view', 'work_orders.create', 'work_orders.update', 'work_orders.delete', 'work_orders.export',
+        'accounts_receivable.view', 'accounts_receivable.export',
+        'maintenance_schedules.view', 'maintenance_schedules.resend_notification',
+        'work_orders.view', 'work_orders.create', 'work_orders.update', 'work_orders.delete', 'work_orders.export', 'work_orders.view_summary', 'work_orders.print_summary', 'work_orders.mark_delivered',
         'work_order_services.view', 'work_order_services.create', 'work_order_services.update', 'work_order_services.delete',
-        'work_order_payments.view', 'work_order_payments.create', 'work_order_payments.delete', 'work_order_payments.print_ticket',
+        'work_order_payments.view', 'work_order_payments.create', 'work_order_payments.delete', 'work_order_payments.print_ticket', 'work_order_payments.resend_notification',
         'work_order_tickets.print',
         'work_order_photos.view', 'work_order_photos.create', 'work_order_photos.delete',
         'work_order_checklist_results.view', 'work_order_checklist_results.update',
         'work_order_diagnoses.view', 'work_order_diagnoses.create', 'work_order_diagnoses.update', 'work_order_diagnoses.delete',
+        'promotions.view', 'promotions.create', 'promotions.update', 'promotions.delete', 'promotions.send_notification',
     ];
 
     /** Permisos del técnico: operaciones de taller. */
@@ -138,11 +154,12 @@ class RolesPermissionSeeder extends Seeder
         'dashboard.view',
         'clients.view', 'clients.create', 'clients.update', 'clients.add_vehicle',
         'vehicles.view', 'vehicles.create', 'vehicles.update',
-        'work_orders.view', 'work_orders.create', 'work_orders.update',
-        'work_order_payments.view', 'work_order_payments.create', 'work_order_payments.print_ticket',
+        'work_orders.view', 'work_orders.create', 'work_orders.update', 'work_orders.mark_delivered',
+        'work_order_payments.view', 'work_order_payments.create', 'work_order_payments.print_ticket', 'work_order_payments.resend_notification',
         'work_order_tickets.print',
         'work_order_photos.view', 'work_order_photos.create',
         'work_order_checklist_results.view',
+        'maintenance_schedules.view', 'maintenance_schedules.resend_notification',
     ];
 
     public function run(): void

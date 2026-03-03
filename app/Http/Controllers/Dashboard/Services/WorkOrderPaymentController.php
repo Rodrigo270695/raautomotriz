@@ -9,6 +9,7 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderPayment;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class WorkOrderPaymentController extends Controller
@@ -186,5 +187,21 @@ class WorkOrderPaymentController extends Controller
             'igv' => $igv,
             'amount' => $amount,
         ]);
+    }
+
+    public function resendNotification(Request $request, WorkOrder $work_order, WorkOrderPayment $payment): RedirectResponse
+    {
+        if (! $request->user()->can('work_order_payments.resend_notification')) {
+            abort(403);
+        }
+
+        if ($payment->work_order_id !== $work_order->id) {
+            abort(404);
+        }
+
+        SendPaymentNotificationJob::dispatch($work_order->id, $payment->id);
+
+        return redirect()->back()
+            ->with('flash', ['type' => 'success', 'message' => 'Notificación de pago reenviada al cliente.']);
     }
 }

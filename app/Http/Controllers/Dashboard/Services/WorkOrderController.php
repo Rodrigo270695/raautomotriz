@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard\Services;
 
 use App\Exports\WorkOrdersExport;
+use App\Jobs\UpdateMaintenanceScheduleJob;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\Services\WorkOrderChecklistResultsRequest;
 use App\Http\Requests\Dashboard\Services\WorkOrderRequest;
@@ -26,6 +27,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -51,6 +54,10 @@ class WorkOrderController extends Controller
                 'showPath' => parse_url(route('dashboard.services.work-orders.show', ['work_order' => $work_order->id]), PHP_URL_PATH),
                 'configPath' => parse_url(route('dashboard.services.work-orders.config', ['work_order' => $work_order->id]), PHP_URL_PATH),
                 'showDataTab' => true,
+                'markReadyPath' => parse_url(route('dashboard.services.work-orders.mark-ready', ['work_order' => $work_order->id]), PHP_URL_PATH),
+                'summaryPdfUrl' => $request->user()?->can('work_orders.print_summary')
+                    ? parse_url(route('dashboard.services.work-orders.summary.pdf', ['work_order' => $work_order->id]), PHP_URL_PATH)
+                    : null,
                 'lastTicketServiceCount' => $work_order->tickets()->orderByDesc('id')->value('service_count'),
             ]
         ));
@@ -74,6 +81,10 @@ class WorkOrderController extends Controller
                 'configPath' => parse_url(route('dashboard.services.work-orders.config', ['work_order' => $work_order->id]), PHP_URL_PATH),
                 'showDataTab' => false,
                 'confirmRepairPath' => parse_url(route('dashboard.services.work-orders.confirm-repair', ['work_order' => $work_order->id]), PHP_URL_PATH),
+                'markReadyPath' => parse_url(route('dashboard.services.work-orders.mark-ready', ['work_order' => $work_order->id]), PHP_URL_PATH),
+                'summaryPdfUrl' => $request->user()?->can('work_orders.print_summary')
+                    ? parse_url(route('dashboard.services.work-orders.summary.pdf', ['work_order' => $work_order->id]), PHP_URL_PATH)
+                    : null,
                 'ticket_print_url' => session('ticket_print_url'),
                 'lastTicketPrintUrl' => $lastTicket
                     ? route('dashboard.services.work-orders.tickets.print', ['work_order' => $work_order->id, 'ticket' => $lastTicket->id])
@@ -86,6 +97,41 @@ class WorkOrderController extends Controller
     /**
      * Carga las relaciones necesarias para las vistas show/config.
      */
+    /**
+     * Construye el array de permisos para la vista de detalle.
+     * Si la orden está entregada, todos los permisos de escritura se deniegan (modo lectura).
+     *
+     * @return array<string, bool>
+     */
+    private function buildCanArray(WorkOrder $work_order, Request $request, mixed $currentUserId, bool $isSuperadmin): array
+    {
+        $isDelivered = $work_order->status === 'entregado';
+        $isAuthor    = $currentUserId && ((int) $currentUserId === (int) $work_order->created_by || $isSuperadmin);
+
+        return [
+            'update'                  => ! $isDelivered && $request->user()?->can('work_orders.update') && $isAuthor,
+            'delete'                  => ! $isDelivered && $request->user()?->can('work_orders.delete') && $isAuthor,
+            'photos_create'           => ! $isDelivered && $request->user()?->can('work_order_photos.create'),
+            'photos_delete'           => ! $isDelivered && $request->user()?->can('work_order_photos.delete'),
+            'checklist_results_view'  => $request->user()?->can('work_order_checklist_results.view'),
+            'checklist_results_update'=> ! $isDelivered && $request->user()?->can('work_order_checklist_results.update'),
+            'diagnoses_view'          => $request->user()?->can('work_order_diagnoses.view'),
+            'diagnoses_create'        => ! $isDelivered && $request->user()?->can('work_order_diagnoses.create'),
+            'diagnoses_update'        => ! $isDelivered && $request->user()?->can('work_order_diagnoses.update'),
+            'diagnoses_delete'        => ! $isDelivered && $request->user()?->can('work_order_diagnoses.delete'),
+            'services_view'           => $request->user()?->can('work_order_services.view'),
+            'services_create'         => ! $isDelivered && $request->user()?->can('work_order_services.create'),
+            'services_update'         => ! $isDelivered && $request->user()?->can('work_order_services.update'),
+            'services_delete'         => ! $isDelivered && $request->user()?->can('work_order_services.delete'),
+            'payments_view'           => $request->user()?->can('work_order_payments.view'),
+            'payments_create'         => ! $isDelivered && $request->user()?->can('work_order_payments.create'),
+            'payments_delete'         => ! $isDelivered && $request->user()?->can('work_order_payments.delete'),
+            'payments_print_ticket'          => $request->user()?->can('work_order_payments.print_ticket'),
+            'payments_resend_notification'   => $request->user()?->can('work_order_payments.resend_notification'),
+            'tickets_print'                  => $request->user()?->can('work_order_tickets.print'),
+        ];
+    }
+
     private function loadWorkOrderRelations(WorkOrder $work_order): void
     {
         $work_order->load([
@@ -134,7 +180,8 @@ class WorkOrderController extends Controller
         ]);
 
         $localTz = config('app.local_timezone', 'America/Lima');
-        $diagnoses = $work_order->diagnoses->map(function (WorkOrderDiagnosis $d) use ($currentUserId, $isSuperadmin, $localTz) {
+        $isDelivered = $work_order->status === 'entregado';
+        $diagnoses = $work_order->diagnoses->map(function (WorkOrderDiagnosis $d) use ($currentUserId, $isSuperadmin, $localTz, $isDelivered) {
             $diagnosedAtLima = $d->diagnosed_at
                 ? Carbon::createFromFormat('Y-m-d H:i:s', $d->diagnosed_at->format('Y-m-d H:i:s'), $localTz)
                 : null;
@@ -148,8 +195,8 @@ class WorkOrderController extends Controller
                 'diagnosed_by_name' => $d->diagnosedByUser
                     ? trim($d->diagnosedByUser->first_name.' '.$d->diagnosedByUser->last_name)
                     : null,
-                'can_edit' => $currentUserId && ((int) $currentUserId === (int) $d->diagnosed_by || $isSuperadmin),
-                'can_delete' => $currentUserId && ((int) $currentUserId === (int) $d->diagnosed_by || $isSuperadmin),
+                'can_edit'   => ! $isDelivered && $currentUserId && ((int) $currentUserId === (int) $d->diagnosed_by || $isSuperadmin),
+                'can_delete' => ! $isDelivered && $currentUserId && ((int) $currentUserId === (int) $d->diagnosed_by || $isSuperadmin),
             ];
         });
 
@@ -294,24 +341,7 @@ class WorkOrderController extends Controller
             'payments' => $payments->values(),
             'paymentsTotalPaid' => $payments->sum('amount'),
             'paymentsBasePath' => parse_url(route('dashboard.services.work-orders.payments.store', ['work_order' => $work_order->id]), PHP_URL_PATH),
-            'can' => [
-                'update' => $request->user()?->can('work_orders.update') && $currentUserId && ((int) $currentUserId === (int) $work_order->created_by || $isSuperadmin),
-                'delete' => $request->user()?->can('work_orders.delete') && $currentUserId && ((int) $currentUserId === (int) $work_order->created_by || $isSuperadmin),
-                'photos_create' => $request->user()?->can('work_order_photos.create'),
-                'photos_delete' => $request->user()?->can('work_order_photos.delete'),
-                'checklist_results_view' => $request->user()?->can('work_order_checklist_results.view'),
-                'checklist_results_update' => $request->user()?->can('work_order_checklist_results.update'),
-                'diagnoses_view' => $request->user()?->can('work_order_diagnoses.view'),
-                'diagnoses_create' => $request->user()?->can('work_order_diagnoses.create'),
-                'diagnoses_update' => $request->user()?->can('work_order_diagnoses.update'),
-                'diagnoses_delete' => $request->user()?->can('work_order_diagnoses.delete'),
-                'services_view' => $request->user()?->can('work_order_services.view'),
-                'payments_view' => $request->user()?->can('work_order_payments.view'),
-                'payments_create' => $request->user()?->can('work_order_payments.create'),
-                'payments_delete' => $request->user()?->can('work_order_payments.delete'),
-                'payments_print_ticket' => $request->user()?->can('work_order_payments.print_ticket'),
-                'tickets_print' => $request->user()?->can('work_order_tickets.print'),
-            ],
+            'can' => $this->buildCanArray($work_order, $request, $currentUserId, $isSuperadmin),
         ];
     }
 
@@ -360,6 +390,196 @@ class WorkOrderController extends Controller
             ->with('flash', ['type' => 'success', 'message' => $wasNotInRepair ? 'Orden en reparación. Ticket generado.' : 'Ticket generado.'])
             ->with('ticket_id', $ticket->id)
             ->with('ticket_print_url', $ticketPrintUrl);
+    }
+
+    public function markReadyToDeliver(Request $request, WorkOrder $work_order): RedirectResponse
+    {
+        if (! $request->user()?->can('work_orders.update')) {
+            abort(403);
+        }
+        if ((int) $request->user()?->id !== (int) $work_order->created_by && ! $request->user()?->hasRole('superadmin')) {
+            abort(403);
+        }
+
+        $blocked = ['listo_para_entregar', 'entregado', 'cancelado'];
+        if (in_array($work_order->status, $blocked, true)) {
+            return redirect()->back()
+                ->with('flash', ['type' => 'info', 'message' => 'La orden ya se encuentra en estado "' . $work_order->status . '".']);
+        }
+
+        $work_order->update(['status' => 'listo_para_entregar']);
+
+        return redirect()->back()
+            ->with('flash', ['type' => 'success', 'message' => 'Orden marcada como lista para entregar.']);
+    }
+
+    public function markDelivered(Request $request, WorkOrder $work_order): RedirectResponse
+    {
+        if (! $request->user()?->can('work_orders.mark_delivered')) {
+            abort(403);
+        }
+        if ((int) $request->user()?->id !== (int) $work_order->created_by && ! $request->user()?->hasRole('superadmin')) {
+            abort(403);
+        }
+
+        if ($work_order->status !== 'listo_para_entregar') {
+            return redirect()->back()
+                ->with('flash', ['type' => 'error', 'message' => 'Solo se pueden entregar órdenes en estado "Listo para entregar".']);
+        }
+
+        $updateData = ['status' => 'entregado'];
+
+        $exitMileage = $request->input('exit_mileage');
+        if ($exitMileage !== null && $exitMileage !== '') {
+            $updateData['exit_mileage'] = (int) $exitMileage;
+        }
+
+        $work_order->update($updateData);
+
+        $nextDueDays = $request->input('next_due_days');
+        $nextDueDaysInt = ($nextDueDays !== null && $nextDueDays !== '') ? (int) $nextDueDays : null;
+
+        UpdateMaintenanceScheduleJob::dispatch($work_order->id, $nextDueDaysInt);
+
+        return redirect()->back()
+            ->with('flash', ['type' => 'success', 'message' => 'Orden marcada como entregada correctamente.']);
+    }
+
+    public function printSummaryPdf(Request $request, WorkOrder $work_order): HttpResponse
+    {
+        if (! $request->user()?->can('work_orders.print_summary')) {
+            abort(403);
+        }
+
+        $work_order->load([
+            'vehicle.vehicleModel.brand',
+            'client',
+            'photos',
+            'checklistResults.serviceChecklist:id,name,order_number',
+            'diagnoses.diagnosedByUser:id,first_name,last_name',
+            'services.product.inventoryBrand:id,name',
+            'services.servicePackage:id,name',
+            'payments',
+        ]);
+
+        $localTz     = config('app.local_timezone', 'America/Lima');
+        $empresa     = config('app.company_name', 'RA Automotriz S.A.C.');
+        $igvRate     = (float) config('app.igv_rate', 0.18);
+        $igvPct      = (int) round($igvRate * 100);
+        $generatedAt = Carbon::now($localTz);
+
+        // ── Vehículo / Cliente ────────────────────────────────────────
+        $vehicle       = $work_order->vehicle;
+        $client        = $work_order->client;
+        $vehicleLabel  = $vehicle
+            ? trim(($vehicle->vehicleModel?->brand?->name ?? '').' '.($vehicle->vehicleModel?->name ?? ''))
+            : '—';
+        $plate         = $vehicle?->plate ?? '—';
+        $clientLabel   = $client
+            ? trim($client->first_name.' '.$client->last_name)
+            : '—';
+
+        // ── Financiero ────────────────────────────────────────────────
+        $services      = $work_order->services->sortBy('id');
+        $servicesTotal = (float) $work_order->total_amount;
+        $baseImponible = round($servicesTotal / (1 + $igvRate), 2);
+        $igvAmount     = round($servicesTotal - $baseImponible, 2);
+
+        $payments      = $work_order->payments->sortBy('id');
+        $totalPaid     = (float) $payments->sum('amount');
+        $saldoPendiente = max(0, round($servicesTotal - $totalPaid, 2));
+
+        // ── Checklist ─────────────────────────────────────────────────
+        $checklistRows = $work_order->checklistResults->sortBy(fn ($r) => $r->serviceChecklist?->order_number ?? 999)->map(fn ($r) => [
+            'name'    => $r->serviceChecklist?->name ?? '—',
+            'checked' => (bool) $r->checked,
+            'note'    => $r->note ?? '',
+        ])->values()->all();
+
+        // ── Diagnósticos ──────────────────────────────────────────────
+        $diagnoses = $work_order->diagnoses->map(fn (WorkOrderDiagnosis $d) => [
+            'text'          => $d->diagnosis_text,
+            'diagnosed_by'  => $d->diagnosedByUser
+                ? trim($d->diagnosedByUser->first_name.' '.$d->diagnosedByUser->last_name)
+                : '—',
+            'diagnosed_at'  => $d->diagnosed_at
+                ? Carbon::parse($d->diagnosed_at)->setTimezone($localTz)->format('d/m/Y H:i')
+                : '—',
+            'internal_notes' => $d->internal_notes,
+        ])->values()->all();
+
+        // ── Servicios y pagos ─────────────────────────────────────────
+        $serviceLines  = $services->map(fn (WorkOrderService $s) => [
+            'description'      => $s->description ?: ($s->product?->name ?? '—'),
+            'package'          => $s->servicePackage?->name,
+            'type'             => $s->type ?? 'service',
+            'quantity'         => (float) $s->quantity,
+            'unit_price'       => (float) $s->unit_price,
+            'subtotal'         => (float) $s->subtotal,
+        ])->values()->all();
+
+        $methodLabels = [
+            'yape' => 'Yape', 'plim' => 'Plim', 'tarjeta' => 'Tarjeta',
+            'efectivo' => 'Efectivo', 'otros' => 'Otros',
+        ];
+        $typeLabels = [
+            'advance' => 'Adelanto', 'partial' => 'Abono parcial', 'final' => 'Pago final',
+        ];
+        $paymentLines  = $payments->map(fn (WorkOrderPayment $p) => [
+            'reference'    => $p->reference,
+            'type_label'   => $typeLabels[$p->type] ?? ucfirst($p->type ?? ''),
+            'method_label' => $methodLabels[$p->payment_method ?? ''] ?? ($p->payment_method ?? '—'),
+            'paid_at'      => $p->paid_at
+                ? Carbon::parse($p->paid_at)->setTimezone($localTz)->format('d/m/Y H:i')
+                : '—',
+            'amount'       => (float) $p->amount,
+        ])->values()->all();
+
+        // ── Fotos como base64 agrupadas por tipo ─────────────────────
+        $photosByType = [];
+        foreach (['entry', 'delivery', 'process', 'diagnosis'] as $type) {
+            $photosByType[$type] = $work_order->photos
+                ->where('type', $type)
+                ->values()
+                ->map(function (WorkOrderPhoto $p) {
+                    $dataUri  = null;
+                    $diskPath = \Illuminate\Support\Facades\Storage::disk('public')->path($p->path ?? '');
+                    if ($p->path && is_file($diskPath)) {
+                        $mime    = mime_content_type($diskPath) ?: 'image/jpeg';
+                        $dataUri = "data:{$mime};base64,".base64_encode(file_get_contents($diskPath));
+                    }
+                    return ['dataUri' => $dataUri, 'caption' => $p->caption];
+                })
+                ->all();
+        }
+
+        // ── Logo ──────────────────────────────────────────────────────
+        $logoDataUri = null;
+        $logoPath    = public_path('logorasf.png');
+        if (is_file($logoPath)) {
+            $logoDataUri = 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath));
+        }
+
+        $statusLabels = [
+            'ingreso' => 'Ingreso', 'en_checklist' => 'En checklist',
+            'diagnosticado' => 'Diagnosticado', 'en_reparacion' => 'En reparación',
+            'listo_para_entregar' => 'Listo para entregar',
+            'entregado' => 'Entregado', 'cancelado' => 'Cancelado',
+        ];
+
+        $pdf = Pdf::loadView('pdf.work-order-summary', compact(
+            'work_order', 'empresa', 'generatedAt', 'localTz',
+            'vehicleLabel', 'plate', 'clientLabel',
+            'servicesTotal', 'baseImponible', 'igvAmount', 'igvPct',
+            'totalPaid', 'saldoPendiente',
+            'checklistRows', 'diagnoses', 'serviceLines', 'paymentLines',
+            'photosByType', 'logoDataUri', 'statusLabels'
+        ))->setPaper('a4', 'portrait');
+
+        $filename = 'resumen-orden-'.$work_order->id.'.pdf';
+
+        // stream() → Content-Disposition: inline → el navegador lo muestra en lugar de descargarlo.
+        return $pdf->stream($filename);
     }
 
     public function printTicket(Request $request, WorkOrder $work_order, WorkOrderTicket $ticket): View
@@ -425,16 +645,41 @@ class WorkOrderController extends Controller
         /** @var LengthAwarePaginator $workOrders */
         $workOrders = $this->repository->paginatedList($request);
 
-        $indexUserId = $request->user()?->id;
-        $indexSuperadmin = $request->user()?->hasRole('superadmin') ?? false;
-        $canUpdate = $request->user()?->can('work_orders.update');
-        $canDelete = $request->user()?->can('work_orders.delete');
+        $indexUserId         = $request->user()?->id;
+        $indexSuperadmin     = $request->user()?->hasRole('superadmin') ?? false;
+        $canUpdate           = $request->user()?->can('work_orders.update');
+        $canDelete           = $request->user()?->can('work_orders.delete');
+        $canViewSummary      = $request->user()?->can('work_orders.view_summary');
+        $canPrintSummary     = $request->user()?->can('work_orders.print_summary');
+        $canMarkDelivered    = $request->user()?->can('work_orders.mark_delivered');
 
-        $workOrders->getCollection()->transform(function (WorkOrder $wo) use ($indexUserId, $indexSuperadmin, $canUpdate, $canDelete) {
+        $workOrders->getCollection()->transform(function (WorkOrder $wo) use ($indexUserId, $indexSuperadmin, $canUpdate, $canDelete, $canViewSummary, $canPrintSummary, $canMarkDelivered) {
             $isAuthorOrSuperadmin = $indexUserId && ((int) $indexUserId === (int) $wo->created_by || $indexSuperadmin);
-            $wo->setAttribute('can_edit', $canUpdate && $isAuthorOrSuperadmin);
-            $wo->setAttribute('can_delete', $canDelete && $isAuthorOrSuperadmin);
+            $isDelivered          = $wo->status === 'entregado';
+            $isReadyToDeliver     = $wo->status === 'listo_para_entregar';
+
+            // Entregado: bloquea edición/eliminación/configuración
+            $wo->setAttribute('can_edit',           ! $isDelivered && $canUpdate && $isAuthorOrSuperadmin);
+            $wo->setAttribute('can_delete',          ! $isDelivered && $canDelete && $isAuthorOrSuperadmin);
+            $wo->setAttribute('can_view_summary',    $isDelivered && $canViewSummary);
+            $wo->setAttribute('can_print_summary',   $isDelivered && $canPrintSummary);
+            $wo->setAttribute('can_mark_delivered',  $isReadyToDeliver && $canMarkDelivered && $isAuthorOrSuperadmin);
+            $wo->setAttribute('mark_deliver_path',   $isReadyToDeliver && $canMarkDelivered && $isAuthorOrSuperadmin
+                ? parse_url(route('dashboard.services.work-orders.mark-delivered', ['work_order' => $wo->id]), PHP_URL_PATH)
+                : null);
             $wo->setAttribute('total_paid', (float) ($wo->payments_sum_amount ?? 0));
+
+            // Intervalos mínimos de los paquetes de servicio (para pre-llenar el dialog de entrega)
+            if ($isReadyToDeliver && $wo->relationLoaded('services')) {
+                $packages = $wo->services->map(fn ($s) => $s->servicePackage)->filter();
+                $minDays  = $packages->whereNotNull('interval_days')->min('interval_days');
+                $minKm    = $packages->whereNotNull('interval_km')->min('interval_km');
+                $wo->setAttribute('min_interval_days', $minDays);
+                $wo->setAttribute('min_interval_km',   $minKm);
+            } else {
+                $wo->setAttribute('min_interval_days', null);
+                $wo->setAttribute('min_interval_km',   null);
+            }
 
             return $wo;
         });
@@ -457,11 +702,13 @@ class WorkOrderController extends Controller
             'workOrdersIndexPath' => parse_url(route('dashboard.services.work-orders.index'), PHP_URL_PATH) ?: '/dashboard/services/work-orders',
             'stats' => $stats,
             'can' => [
-                'create' => $request->user()?->can('work_orders.create'),
-                'update' => $request->user()?->can('work_orders.update'),
-                'delete' => $request->user()?->can('work_orders.delete'),
-                'view_photos' => $request->user()?->can('work_order_photos.view'),
-                'export' => $canExport,
+                'create'        => $request->user()?->can('work_orders.create'),
+                'update'        => $request->user()?->can('work_orders.update'),
+                'delete'        => $request->user()?->can('work_orders.delete'),
+                'view_photos'   => $request->user()?->can('work_order_photos.view'),
+                'view_summary'  => $canViewSummary,
+                'print_summary' => $canPrintSummary,
+                'export'        => $canExport,
             ],
             'exportUrl' => $exportUrl,
         ]);
@@ -503,9 +750,15 @@ class WorkOrderController extends Controller
             abort(403);
         }
 
-        $data = $request->validated();
+        $data            = $request->validated();
+        $previousStatus  = $workOrder->status;
         $workOrder->update($data);
         $workOrder->recalcTotalFromServices();
+
+        // Al marcar como entregado: actualizar calendario de mantenimiento
+        if ($previousStatus !== 'entregado' && ($data['status'] ?? '') === 'entregado') {
+            UpdateMaintenanceScheduleJob::dispatch($workOrder->id);
+        }
 
         $advance = (float) ($data['advance_payment_amount'] ?? 0);
         $initialPayment = $workOrder->payments()->where('is_initial_advance', true)->first();

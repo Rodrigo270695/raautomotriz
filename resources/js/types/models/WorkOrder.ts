@@ -33,6 +33,14 @@ export type WorkOrder = {
     can_edit?: boolean;
     /** Si el usuario actual puede eliminar esta orden (creador o superadmin + permiso). */
     can_delete?: boolean;
+    /** Orden entregada: puede ver el resumen de la orden. */
+    can_view_summary?: boolean;
+    /** Orden entregada: puede descargar el PDF resumen. */
+    can_print_summary?: boolean;
+    /** Listo para entregar: puede marcar como entregado. */
+    can_mark_delivered?: boolean;
+    /** URL para marcar como entregado (solo cuando status === listo_para_entregar). */
+    mark_deliver_path?: string | null;
 };
 
 export type WorkOrderStatus =

@@ -51,22 +51,42 @@ class SendWelcomeNotificationJob implements ShouldQueue
             $vehiculoTexto = 'su vehículo';
         }
 
-        $kilometraje = $workOrder->entry_mileage !== null && $workOrder->entry_mileage !== ''
-            ? ' con kilometraje de ingreso: '.number_format((float) $workOrder->entry_mileage, 0, '', ',').' km.'
-            : '.';
+        $empresa     = config('app.company_name', 'RA Automotriz S.A.C.');
+        $saludo      = $nombre !== '' ? "Estimado/a {$nombre}," : 'Estimado/a cliente,';
+        $saludoNombre = $nombre !== '' ? ", {$nombre}" : '';
 
-        $empresa = config('app.company_name', 'RA Automotriz S.A.C.');
-        $saludo = $nombre !== '' ? "Estimado/a {$nombre}," : 'Estimado/a cliente,';
-        $mensaje = "Bienvenido a {$empresa}\n\n"
-            ."{$saludo}\n\n"
-            ."Le informamos que {$vehiculoTexto} ha ingresado a nuestro taller{$kilometraje}\n\n"
-            ."Nuestro equipo realizará el chequeo y diagnóstico correspondiente; le mantendremos informado/a en cada etapa.\n\n"
-            .'Gracias por confiar en nosotros. ¡Estamos a su disposición!';
+        $kmTexto = ($workOrder->entry_mileage !== null && $workOrder->entry_mileage !== '')
+            ? number_format((float) $workOrder->entry_mileage, 0, '', ',').' km'
+            : null;
 
-        $asunto = "Bienvenida – Su vehículo ha ingresado a {$empresa}";
+        // ── Mensaje WhatsApp (con emojis y negrita) ───────────────────
+        $mensajeWhatsApp = "🔧 *{$empresa}*\n\n"
+            ."🎉 *¡Bienvenido/a{$saludoNombre}!*\n\n"
+            ."Le informamos que su vehículo ya está en nuestro taller:\n\n"
+            ."🚗 *Vehículo:* {$vehiculoTexto}\n"
+            ."🔢 *N.° de orden:* #{$workOrder->id}\n"
+            .($kmTexto !== null ? "🛣️ *Km. de ingreso:* {$kmTexto}\n" : '')
+            ."\n📋 Nuestro equipo realizará el chequeo y diagnóstico correspondiente. "
+            ."Le iremos informando del avance en cada etapa.\n\n"
+            ."¡Gracias por confiar en nosotros! 💪";
 
-        $notificationService->sendEmail($client, $asunto, $mensaje, $workOrder);
-        $notificationService->sendWhatsApp($client, $mensaje, $workOrder);
+        // ── Mensaje email (limpio y formal) ───────────────────────────
+        $mensajeEmail = "{$saludo}\n\n"
+            ."Le informamos que su vehículo \"{$vehiculoTexto}\" ha ingresado a nuestro taller.\n\n"
+            ."━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            ."N.° de orden  : #{$workOrder->id}\n"
+            ."Vehículo      : {$vehiculoTexto}\n"
+            .($kmTexto !== null ? "Km. de ingreso: {$kmTexto}\n" : '')
+            ."━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            ."Nuestro equipo realizará el chequeo y diagnóstico correspondiente; "
+            ."le mantendremos informado/a en cada etapa.\n\n"
+            ."Ante cualquier consulta, estamos a su disposición.\n\n"
+            ."Gracias por confiar en nosotros.";
+
+        $asunto = "Bienvenida – Su vehículo ingresó a {$empresa} | Orden #{$workOrder->id}";
+
+        $notificationService->sendEmail($client, $asunto, $mensajeEmail, $workOrder);
+        $notificationService->sendWhatsApp($client, $mensajeWhatsApp, $workOrder);
     }
 
     public function failed(\Throwable $e): void

@@ -31,6 +31,7 @@ import type { Role } from '@/types';
 export type PermissionsGrouped = Record<string, string[]>;
 
 const actionLabels: Record<string, string> = {
+    send_notification: 'Enviar notificación a clientes',
     view: 'Ver',
     create: 'Crear',
     update: 'Editar',
@@ -40,7 +41,11 @@ const actionLabels: Record<string, string> = {
     export: 'Descargar Excel',
     view_audit: 'Ver creado/modificado',
     print_ticket: 'Imprimir ticket de pago',
+    resend_notification: 'Reenviar aviso / comprobante',
     print: 'Imprimir ticket de orden',
+    view_summary: 'Ver resumen (entregadas)',
+    print_summary: 'Descargar PDF resumen',
+    mark_delivered: 'Marcar como entregado',
 };
 
 /** Permiso especial que se muestra bajo "Roles" como "Gestionar permisos" */
@@ -244,6 +249,21 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
         name: `service_package_items.${action}`,
         label: getActionLabel(action),
     }));
+    const accountsReceivableActions = permissionsGrouped['accounts_receivable'] ?? [];
+    const accountsReceivablePerms: Array<{ name: string; label: string }> = accountsReceivableActions.map((action) => ({
+        name: `accounts_receivable.${action}`,
+        label: getActionLabel(action),
+    }));
+    const maintenanceSchedulesActions = permissionsGrouped['maintenance_schedules'] ?? [];
+    const maintenanceSchedulesPerms: Array<{ name: string; label: string }> = maintenanceSchedulesActions.map((action) => ({
+        name: `maintenance_schedules.${action}`,
+        label: getActionLabel(action),
+    }));
+    const promotionsActions = permissionsGrouped['promotions'] ?? [];
+    const promotionsPerms: Array<{ name: string; label: string }> = promotionsActions.map((action) => ({
+        name: `promotions.${action}`,
+        label: getActionLabel(action),
+    }));
     const servicioChildren: MenuItem[] = [];
     if (serviceChecklistsPerms.length) servicioChildren.push({ id: 'service_checklists', label: 'Lista de chequeo', permissions: serviceChecklistsPerms });
     if (serviceTypesPerms.length) servicioChildren.push({ id: 'service_types', label: 'Tipo de servicio', permissions: serviceTypesPerms });
@@ -256,8 +276,17 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
     if (workOrderServicesPerms.length) servicioChildren.push({ id: 'work_order_services', label: 'Servicios de orden de trabajo', permissions: workOrderServicesPerms });
     if (workOrderPaymentsPerms.length) servicioChildren.push({ id: 'work_order_payments', label: 'Pagos de orden de trabajo', permissions: workOrderPaymentsPerms });
     if (workOrderTicketsPerms.length) servicioChildren.push({ id: 'work_order_tickets', label: 'Tickets de orden de trabajo', permissions: workOrderTicketsPerms });
+    if (accountsReceivablePerms.length) servicioChildren.push({ id: 'accounts_receivable', label: 'Cuentas por cobrar', permissions: accountsReceivablePerms });
+    if (maintenanceSchedulesPerms.length) servicioChildren.push({ id: 'maintenance_schedules', label: 'Recordatorios de mantenimiento', permissions: maintenanceSchedulesPerms });
     if (servicioChildren.length) {
         result.push({ id: 'servicio', label: 'Servicio', children: servicioChildren });
+    }
+
+    // Marketing
+    const marketingChildren: MenuItem[] = [];
+    if (promotionsPerms.length) marketingChildren.push({ id: 'promotions', label: 'Promociones', permissions: promotionsPerms });
+    if (marketingChildren.length) {
+        result.push({ id: 'marketing', label: 'Marketing', children: marketingChildren });
     }
 
     return result;
@@ -306,11 +335,26 @@ const SIDEBAR_PREVIEW_ITEMS = [
             { permission: 'service_packages.view', label: 'Paquetes de servicio', icon: LayoutGrid },
             { permission: 'service_package_items.view', label: 'Ítems de paquetes de servicio', icon: LayoutGrid },
             { permission: 'work_orders.view', label: 'Órdenes de trabajo', icon: LayoutGrid },
+            { permission: 'work_orders.mark_delivered', label: 'Marcar como entregado', icon: LayoutGrid },
+            { permission: 'work_orders.view_summary', label: 'Ver resumen (entregadas)', icon: LayoutGrid },
+            { permission: 'work_orders.print_summary', label: 'Descargar PDF resumen', icon: LayoutGrid },
             { permission: 'work_order_photos.view', label: 'Fotos de orden de trabajo', icon: LayoutGrid },
             { permission: 'work_order_checklist_results.view', label: 'Checklist de orden de trabajo', icon: LayoutGrid },
             { permission: 'work_order_diagnoses.view', label: 'Diagnósticos de orden de trabajo', icon: LayoutGrid },
             { permission: 'work_order_services.view', label: 'Servicios de orden de trabajo', icon: LayoutGrid },
             { permission: 'work_order_payments.view', label: 'Pagos de orden de trabajo', icon: LayoutGrid },
+            { permission: 'work_order_payments.resend_notification', label: 'Reenviar comprobante de pago', icon: LayoutGrid },
+            { permission: 'accounts_receivable.view', label: 'Cuentas por cobrar', icon: LayoutGrid },
+            { permission: 'maintenance_schedules.view', label: 'Recordatorios de mantenimiento', icon: LayoutGrid },
+            { permission: 'maintenance_schedules.resend_notification', label: 'Reenviar aviso de mantenimiento', icon: LayoutGrid },
+        ],
+    },
+    {
+        permission: null,
+        label: 'Marketing',
+        icon: LayoutGrid,
+        children: [
+            { permission: 'promotions.view', label: 'Promociones', icon: LayoutGrid },
         ],
     },
 ];
@@ -335,7 +379,7 @@ export function AssignPermissionsModal({
     const [loading, setLoading] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
     const [activeTab, setActiveTab] = React.useState<'permisos' | 'preview'>('permisos');
-    const [expanded, setExpanded] = React.useState<Set<string>>(new Set(['dashboard', 'usuarios', 'roles', 'users', 'clients', 'vehiculos', 'brands', 'vehicle_models', 'vehicles']));
+    const [expanded, setExpanded] = React.useState<Set<string>>(new Set());
 
     const menuTree = React.useMemo(() => buildMenuTree(permissionsGrouped), [permissionsGrouped]);
 
@@ -370,6 +414,23 @@ export function AssignPermissionsModal({
             const next = new Set(prev);
             if (next.has(fullName)) next.delete(fullName);
             else next.add(fullName);
+            return next;
+        });
+    };
+
+    // Obtiene todos los nombres de permisos de un nodo (grupo o ítem)
+    const getAllPerms = React.useCallback((node: MenuTreeNode): string[] => {
+        if (isMenuGroup(node)) return node.children.flatMap((c) => c.permissions.map((p) => p.name));
+        return node.permissions.map((p) => p.name);
+    }, []);
+
+    const isAllSelected = (perms: string[]) => perms.length > 0 && perms.every((p) => selectedNames.has(p));
+    const isSomeSelected = (perms: string[]) => perms.some((p) => selectedNames.has(p));
+
+    const toggleAll = (perms: string[], selectAll: boolean) => {
+        setSelectedNames((prev) => {
+            const next = new Set(prev);
+            perms.forEach((p) => selectAll ? next.add(p) : next.delete(p));
             return next;
         });
     };
@@ -468,63 +529,76 @@ export function AssignPermissionsModal({
                                         No hay permisos configurados.
                                     </p>
                                 ) : (
-                                    <div className="max-h-[min(45vh,320px)] overflow-y-auto rounded-md border border-content-border">
+                                    <div className="max-h-[min(50vh,360px)] overflow-y-auto rounded-md border border-content-border">
                                         {menuTree.map((node) => {
+                                            const nodePerms = getAllPerms(node);
+                                            const allChk  = isAllSelected(nodePerms);
+                                            const someChk = !allChk && isSomeSelected(nodePerms);
+                                            const isOpen  = expanded.has(node.id);
+
                                             if (isMenuGroup(node)) {
-                                                const isOpen = expanded.has(node.id);
                                                 return (
-                                                    <Collapsible
-                                                        key={node.id}
-                                                        open={isOpen}
-                                                        onOpenChange={() => toggleExpanded(node.id)}
-                                                    >
-                                                        <CollapsibleTrigger asChild>
-                                                            <button
-                                                                type="button"
-                                                                className="flex w-full cursor-pointer items-center gap-2 border-b border-content-border bg-content-muted/20 px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-content-muted/40"
-                                                            >
-                                                                {isOpen ? (
-                                                                    <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                                                                ) : (
-                                                                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                                                                )}
-                                                                <Users className="size-4 shrink-0 text-muted-foreground" />
-                                                                {node.label}
-                                                            </button>
-                                                        </CollapsibleTrigger>
-                                                        <CollapsibleContent>
-                                                            <div className="border-t border-content-border bg-card/30">
+                                                    <Collapsible key={node.id} open={isOpen} onOpenChange={() => toggleExpanded(node.id)}>
+                                                        {/* Cabecera del grupo */}
+                                                        <div className="flex items-center gap-2 border-b border-content-border bg-content-muted/30 px-3 py-2.5 last:border-b-0">
+                                                            <CollapsibleTrigger asChild>
+                                                                <button type="button" className="flex flex-1 cursor-pointer items-center gap-2 text-left text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors">
+                                                                    <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200', !isOpen && '-rotate-90')} />
+                                                                    <Users className="size-4 shrink-0 text-muted-foreground" />
+                                                                    {node.label}
+                                                                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                                                                        ({nodePerms.filter(p => selectedNames.has(p)).length}/{nodePerms.length})
+                                                                    </span>
+                                                                </button>
+                                                            </CollapsibleTrigger>
+                                                            {/* Checkbox "Marcar todo" del grupo */}
+                                                            <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground shrink-0 select-none"
+                                                                onClick={(e) => e.stopPropagation()}>
+                                                                <Checkbox
+                                                                    checked={allChk ? true : someChk ? 'indeterminate' : false}
+                                                                    onCheckedChange={(v) => toggleAll(nodePerms, !!v)}
+                                                                    className="size-3.5 rounded-[3px]"
+                                                                />
+                                                                Todo
+                                                            </label>
+                                                        </div>
+
+                                                        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                                                            <div className="bg-card/20">
                                                                 {node.children.map((child) => {
+                                                                    const childPerms = child.permissions.map(p => p.name);
+                                                                    const childAll  = isAllSelected(childPerms);
+                                                                    const childSome = !childAll && isSomeSelected(childPerms);
                                                                     const childOpen = expanded.has(child.id);
                                                                     return (
-                                                                        <Collapsible
-                                                                            key={child.id}
-                                                                            open={childOpen}
-                                                                            onOpenChange={() => toggleExpanded(child.id)}
-                                                                        >
-                                                                            <CollapsibleTrigger asChild>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    className="flex w-full cursor-pointer items-center gap-2 border-b border-content-border/60 bg-card/50 py-2 pl-8 pr-3 text-left text-sm font-medium text-foreground hover:bg-content-muted/30"
-                                                                                >
-                                                                                    {childOpen ? (
-                                                                                        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                                                                                    ) : (
-                                                                                        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                                                                                    )}
-                                                                                    <KeyRound className="size-4 shrink-0 text-muted-foreground" />
-                                                                                    {child.label}
-                                                                                </button>
-                                                                            </CollapsibleTrigger>
-                                                                            <CollapsibleContent>
-                                                                                <ul className="border-t border-content-border/50 bg-card/50">
+                                                                        <Collapsible key={child.id} open={childOpen} onOpenChange={() => toggleExpanded(child.id)}>
+                                                                            <div className="flex items-center gap-2 border-b border-content-border/50 bg-card/40 py-2 pl-6 pr-3 last:border-b-0">
+                                                                                <CollapsibleTrigger asChild>
+                                                                                    <button type="button" className="flex flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium text-foreground hover:text-foreground/80 transition-colors">
+                                                                                        <ChevronDown className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform duration-200', !childOpen && '-rotate-90')} />
+                                                                                        <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
+                                                                                        {child.label}
+                                                                                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                                                                                            ({childPerms.filter(p => selectedNames.has(p)).length}/{childPerms.length})
+                                                                                        </span>
+                                                                                    </button>
+                                                                                </CollapsibleTrigger>
+                                                                                <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground shrink-0 select-none"
+                                                                                    onClick={(e) => e.stopPropagation()}>
+                                                                                    <Checkbox
+                                                                                        checked={childAll ? true : childSome ? 'indeterminate' : false}
+                                                                                        onCheckedChange={(v) => toggleAll(childPerms, !!v)}
+                                                                                        className="size-3.5 rounded-[3px]"
+                                                                                    />
+                                                                                    Todo
+                                                                                </label>
+                                                                            </div>
+                                                                            <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                                                                                <ul className="border-b border-content-border/40 bg-card/50">
                                                                                     {child.permissions.map((perm) => (
-                                                                                        <PermissionRow
-                                                                                            key={perm.name}
-                                                                                            perm={perm}
+                                                                                        <PermissionRow key={perm.name} perm={perm}
                                                                                             checked={selectedNames.has(perm.name)}
-                                                                                            onToggle={() => togglePermission(perm.name)}
-                                                                                        />
+                                                                                            onToggle={() => togglePermission(perm.name)} />
                                                                                     ))}
                                                                                 </ul>
                                                                             </CollapsibleContent>
@@ -536,36 +610,37 @@ export function AssignPermissionsModal({
                                                     </Collapsible>
                                                 );
                                             }
-                                            const isOpen = expanded.has(node.id);
+
+                                            // MenuItem directo (ej. Panel de control)
                                             return (
-                                                <Collapsible
-                                                    key={node.id}
-                                                    open={isOpen}
-                                                    onOpenChange={() => toggleExpanded(node.id)}
-                                                >
-                                                    <CollapsibleTrigger asChild>
-                                                        <button
-                                                            type="button"
-                                                            className="flex w-full cursor-pointer items-center gap-2 border-b border-content-border bg-content-muted/20 px-3 py-2.5 text-left text-sm font-medium text-foreground last:border-b-0 hover:bg-content-muted/40"
-                                                        >
-                                                            {isOpen ? (
-                                                                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                                                            ) : (
-                                                                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                                                            )}
-                                                            <LayoutGrid className="size-4 shrink-0 text-muted-foreground" />
-                                                            {node.label}
-                                                        </button>
-                                                    </CollapsibleTrigger>
-                                                    <CollapsibleContent>
-                                                        <ul className="border-t border-content-border bg-card/50">
+                                                <Collapsible key={node.id} open={isOpen} onOpenChange={() => toggleExpanded(node.id)}>
+                                                    <div className="flex items-center gap-2 border-b border-content-border bg-content-muted/30 px-3 py-2.5 last:border-b-0">
+                                                        <CollapsibleTrigger asChild>
+                                                            <button type="button" className="flex flex-1 cursor-pointer items-center gap-2 text-left text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors">
+                                                                <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200', !isOpen && '-rotate-90')} />
+                                                                <LayoutGrid className="size-4 shrink-0 text-muted-foreground" />
+                                                                {node.label}
+                                                                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                                                                    ({nodePerms.filter(p => selectedNames.has(p)).length}/{nodePerms.length})
+                                                                </span>
+                                                            </button>
+                                                        </CollapsibleTrigger>
+                                                        <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground shrink-0 select-none"
+                                                            onClick={(e) => e.stopPropagation()}>
+                                                            <Checkbox
+                                                                checked={allChk ? true : someChk ? 'indeterminate' : false}
+                                                                onCheckedChange={(v) => toggleAll(nodePerms, !!v)}
+                                                                className="size-3.5 rounded-[3px]"
+                                                            />
+                                                            Todo
+                                                        </label>
+                                                    </div>
+                                                    <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                                                        <ul className="border-b border-content-border bg-card/50">
                                                             {node.permissions.map((perm) => (
-                                                                <PermissionRow
-                                                                    key={perm.name}
-                                                                    perm={perm}
+                                                                <PermissionRow key={perm.name} perm={perm}
                                                                     checked={selectedNames.has(perm.name)}
-                                                                    onToggle={() => togglePermission(perm.name)}
-                                                                />
+                                                                    onToggle={() => togglePermission(perm.name)} />
                                                             ))}
                                                         </ul>
                                                     </CollapsibleContent>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Banknote, Plus, Printer } from 'lucide-react';
+import { Banknote, Plus, Printer, Send } from 'lucide-react';
+import { router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { ActionButtons } from '@/components/actions';
 import { DataTableCard } from '@/components/data-table/DataTableCard';
@@ -64,12 +65,25 @@ export function WorkOrderPaymentsSection({
 }: WorkOrderPaymentsSectionProps) {
     const getPaymentPrintUrl = (paymentId: number) =>
         (typeof window !== 'undefined' ? window.location.origin : '') + `${paymentsBasePath}/${paymentId}/print`;
+    const getPaymentResendUrl = (paymentId: number) =>
+        `${paymentsBasePath}/${paymentId}/resend-notification`;
     const [formOpen, setFormOpen] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState<WorkOrderPaymentItem | null>(null);
+    const [resendingId, setResendingId] = useState<number | null>(null);
+
+    const handleResend = (paymentId: number) => {
+        if (resendingId !== null) return;
+        setResendingId(paymentId);
+        router.post(getPaymentResendUrl(paymentId), {}, {
+            preserveScroll: true,
+            onFinish: () => setResendingId(null),
+        });
+    };
 
     const canView = can.payments_view ?? true;
     const canModify = (can.payments_create ?? false) || (can.payments_delete ?? false);
     const canPrintTicket = can.payments_print_ticket ?? false;
+    const canResendNotification = can.payments_resend_notification ?? false;
     const balancePending = Math.max(0, servicesTotal - paymentsTotalPaid);
     const hasServicesWithTotal = servicesTotal > 0;
     const isFullyPaid = hasServicesWithTotal && paymentsTotalPaid >= servicesTotal - 0.01;
@@ -230,7 +244,7 @@ export function WorkOrderPaymentsSection({
                                             <td className="py-2.5 px-3 align-middle text-muted-foreground text-sm truncate max-w-[140px]" title={p.notes ?? undefined}>
                                                 {p.notes || '—'}
                                             </td>
-{(canModify || (onOpenPrintModal && canPrintTicket)) && (
+{(canModify || (onOpenPrintModal && canPrintTicket) || canResendNotification) && (
                                             <td className="py-2.5 px-3 align-middle text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         {onOpenPrintModal && canPrintTicket && (
@@ -243,6 +257,19 @@ export function WorkOrderPaymentsSection({
                                                                 title="Imprimir comprobante"
                                                             >
                                                                 <Printer className="size-4" />
+                                                            </Button>
+                                                        )}
+                                                        {canResendNotification && paymentsBasePath && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="cursor-pointer size-8 text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/40"
+                                                                onClick={() => handleResend(p.id)}
+                                                                disabled={resendingId === p.id}
+                                                                title="Reenviar comprobante al cliente"
+                                                            >
+                                                                <Send className="size-4" />
                                                             </Button>
                                                         )}
                                                         {canModify && paymentsBasePath && (
@@ -268,7 +295,7 @@ export function WorkOrderPaymentsSection({
                                         <td className="py-2.5 px-3 text-right text-sm font-semibold text-foreground tabular-nums">
                                             S/ {formatCurrency(paymentsTotalPaid)}
                                         </td>
-                                        {(canModify || (onOpenPrintModal && canPrintTicket)) && <td />}
+                                        {(canModify || (onOpenPrintModal && canPrintTicket) || canResendNotification) && <td />}
                                     </tr>
                                 </tfoot>
                             </table>
@@ -287,18 +314,33 @@ export function WorkOrderPaymentsSection({
                                                 </span>
                                             }
                                             actions={
-                                                (canModify && paymentsBasePath) || (onOpenPrintModal && canPrintTicket) ? (
+                                                (canModify && paymentsBasePath) || (onOpenPrintModal && canPrintTicket) || canResendNotification ? (
                                                     <div className="flex items-center justify-end gap-1">
                                                         {onOpenPrintModal && canPrintTicket && (
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
-                                                                size="icon"
-                                                                className="cursor-pointer size-8 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                                                                size="sm"
+                                                                className="cursor-pointer h-8 gap-1.5 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
                                                                 onClick={() => onOpenPrintModal(getPaymentPrintUrl(p.id))}
                                                                 title="Imprimir comprobante"
                                                             >
-                                                                <Printer className="size-4" />
+                                                                <Printer className="size-3.5" />
+                                                                <span>Imprimir</span>
+                                                            </Button>
+                                                        )}
+                                                        {canResendNotification && paymentsBasePath && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="cursor-pointer h-8 gap-1.5 text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/40"
+                                                                onClick={() => handleResend(p.id)}
+                                                                disabled={resendingId === p.id}
+                                                                title="Reenviar comprobante al cliente"
+                                                            >
+                                                                <Send className="size-3.5" />
+                                                                <span>Reenviar</span>
                                                             </Button>
                                                         )}
                                                         {canModify && paymentsBasePath && (

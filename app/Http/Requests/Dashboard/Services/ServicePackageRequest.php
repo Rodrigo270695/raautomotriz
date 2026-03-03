@@ -25,6 +25,8 @@ class ServicePackageRequest extends FormRequest
             'service_type_id' => ['required', 'integer', Rule::exists('service_types', 'id')],
             'status' => ['required', 'string', 'in:active,inactive'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'interval_km' => ['nullable', 'integer', 'min:100', 'max:500000'],
+            'interval_days' => ['nullable', 'integer', 'min:1', 'max:3650'],
         ];
     }
 
@@ -39,6 +41,8 @@ class ServicePackageRequest extends FormRequest
             'service_type_id' => 'tipo de servicio',
             'status' => 'estado',
             'sort_order' => 'orden',
+            'interval_km' => 'intervalo en km',
+            'interval_days' => 'intervalo en días',
         ];
     }
 }

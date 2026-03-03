@@ -209,3 +209,94 @@
         box-shadow: inset 0 0 0 1px oklch(0.26 0.02 248 / 0.5);
     }
 }
+
+/* ── Estilos del sidebar (override shadcn) ────────────────────────────── */
+
+/* Item activo — sub-ítem y top-level */
+.nav-sub-active,
+.nav-sub-active:hover,
+.nav-sub-active[data-active="true"],
+.nav-item-active,
+.nav-item-active:hover,
+.nav-item-active[data-active="true"] {
+    background-color: color-mix(in srgb, #2d4a6f 16%, transparent) !important;
+    color: #1e3557 !important;
+    font-weight: 600 !important;
+    border-left: 3px solid #2d4a6f !important;
+    padding-left: calc(0.625rem - 3px) !important;
+    border-radius: 0 0.375rem 0.375rem 0 !important;
+    box-shadow: inset 3px 0 0 0 #2d4a6f !important;
+    box-shadow: none !important; /* reset — usamos border-left */
+    transition: none !important;
+}
+
+/* Dark mode activo */
+.dark .nav-sub-active,
+.dark .nav-sub-active:hover,
+.dark .nav-sub-active[data-active="true"],
+.dark .nav-item-active,
+.dark .nav-item-active:hover {
+    background-color: color-mix(in srgb, #4a7ab5 22%, transparent) !important;
+    color: #c5daef !important;
+    border-left-color: #6fa3d4 !important;
+}
+
+/* Hover en items inactivos — muy sutil, sin borde */
+.nav-sub-inactive,
+.nav-item-inactive {
+    border-left: 3px solid transparent !important;
+    padding-left: calc(0.625rem - 3px) !important;
+    border-radius: 0 0.375rem 0.375rem 0 !important;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease !important;
+}
+.nav-sub-inactive:hover,
+.nav-item-inactive:hover {
+    background-color: color-mix(in srgb, #2d4a6f 8%, transparent) !important;
+    color: #2d4a6f !important;
+    border-left-color: color-mix(in srgb, #2d4a6f 35%, transparent) !important;
+}
+.dark .nav-sub-inactive:hover,
+.dark .nav-item-inactive:hover {
+    background-color: color-mix(in srgb, #4a7ab5 15%, transparent) !important;
+    color: #a8c4e0 !important;
+    border-left-color: color-mix(in srgb, #6fa3d4 40%, transparent) !important;
+}
+
+/* Grupo padre abierto */
+.nav-group-trigger[data-state="open"] {
+    background-color: color-mix(in srgb, #2d4a6f 10%, transparent) !important;
+    color: #1e3557 !important;
+    font-weight: 500 !important;
+}
+.dark .nav-group-trigger[data-state="open"] {
+    background-color: color-mix(in srgb, #4a7ab5 18%, transparent) !important;
+    color: #c5daef !important;
+}
+
+/* ── Animaciones collapsible sidebar ─────────────────────────────────── */
+@keyframes collapsible-down {
+    from { height: 0; opacity: 0; }
+    to   { height: var(--radix-collapsible-content-height); opacity: 1; }
+}
+@keyframes collapsible-up {
+    from { height: var(--radix-collapsible-content-height); opacity: 1; }
+    to   { height: 0; opacity: 0; }
+}
+.animate-collapsible-down {
+    animation: collapsible-down 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-collapsible-up {
+    animation: collapsible-up 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Hero: Ken Burns effect ───────────────────────────────────────────── */
+@keyframes kenburns {
+    0%   { transform: scale(1.0) translate(0%, 0%); }
+    100% { transform: scale(1.1) translate(-1.5%, -1%); }
+}
+
+/* ── Hero: progress bar ────────────────────────────────────────────────── */
+@keyframes progress {
+    from { width: 0%; }
+    to   { width: 100%; }
+}

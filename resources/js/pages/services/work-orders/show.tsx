@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, FileDown, Lock, Printer } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import {
     Dialog,
@@ -74,6 +74,8 @@ type ShowPageProps = {
     technicians?: Array<{ id: number; first_name: string; last_name: string }>;
     can: WorkOrderShowCan;
     confirmRepairPath?: string;
+    markReadyPath?: string;
+    summaryPdfUrl?: string | null;
     ticket_print_url?: string | null;
     lastTicketPrintUrl?: string | null;
     lastTicketServiceCount?: number | null;
@@ -107,16 +109,25 @@ export default function WorkOrderShowPage({
     diagnosesBasePath = '',
     can,
     confirmRepairPath,
+    markReadyPath,
+    summaryPdfUrl,
     ticket_print_url,
     lastTicketPrintUrl,
     lastTicketServiceCount,
 }: ShowPageProps) {
     const page = usePage();
     const flashStockWarnings = (page.props as { flash_stock_warnings?: string[] }).flash_stock_warnings ?? [];
-    const [activeTab, setActiveTab] = useState<WorkOrderShowTabId>(showDataTab ? 'datos' : 'fotos');
+
+    const isDelivered = workOrder.status === 'entregado';
+    // En órdenes entregadas nunca mostramos el tab "Datos de la orden"
+    const effectiveShowDataTab = showDataTab && !isDelivered;
+
+    const [activeTab, setActiveTab] = useState<WorkOrderShowTabId>(effectiveShowDataTab ? 'datos' : 'fotos');
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [pendingPrintUrl, setPendingPrintUrl] = useState<string | null>(null);
+    const [summaryPdfOpen, setSummaryPdfOpen] = useState(false);
+    const summaryIframeRef = React.useRef<HTMLIFrameElement>(null);
 
     useEffect(() => {
         if (ticket_print_url) setPendingPrintUrl(ticket_print_url);
@@ -127,18 +138,20 @@ export default function WorkOrderShowPage({
     }, [flashPaymentPrintUrl]);
 
     const canConfirmRepair =
-        !showDataTab &&
+        !effectiveShowDataTab &&
+        !isDelivered &&
         confirmRepairPath &&
         can.update &&
         (can.tickets_print ?? true) &&
         ['ingreso', 'en_checklist', 'diagnosticado', 'en_reparacion'].includes(workOrder.status);
 
     // Flujo progresivo de tabs: Fotos y Checklist siempre habilitados; luego Diagnósticos; luego Servicios.
+    // En órdenes entregadas todos los tabs están habilitados (solo lectura).
     const fotosDone = photoStats.total >= 1;
     const checklistDone = checklistResults.length > 0;
-    const diagnosticosEnabled = checklistDone;
+    const diagnosticosEnabled = isDelivered || checklistDone;
     const diagnosticosDone = diagnoses.length >= 1;
-    const serviciosEnabled = diagnosticosDone;
+    const serviciosEnabled = isDelivered || diagnosticosDone;
     const servicesHasItems = services.length >= 1;
     const paymentComplete = servicesTotal > 0 && paymentsTotalPaid >= servicesTotal - 0.01;
     const serviciosDone = servicesHasItems && paymentComplete;
@@ -196,11 +209,23 @@ export default function WorkOrderShowPage({
         ? `${workOrder.client.first_name} ${workOrder.client.last_name}`.trim()
         : '—';
 
-    const breadcrumbs = getBreadcrumbs(workOrdersIndexPath, showDataTab ? showPath : (configPath ?? showPath));
+    const breadcrumbs = getBreadcrumbs(workOrdersIndexPath, effectiveShowDataTab ? showPath : (configPath ?? showPath));
+
+    const pageTitle = isDelivered
+        ? `Resumen · ${vehicleLabel}`
+        : effectiveShowDataTab
+          ? `Orden ${vehicleLabel}`
+          : `Configuración · ${vehicleLabel}`;
+
+    const headingLabel = isDelivered
+        ? `Resumen · ${vehicleLabel}`
+        : effectiveShowDataTab
+          ? vehicleLabel
+          : `Configuración · ${vehicleLabel}`;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={showDataTab ? `Orden ${vehicleLabel}` : `Configuración · ${vehicleLabel}`} />
+            <Head title={pageTitle} />
 
             <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
                 <header className="flex flex-col gap-2">
@@ -212,7 +237,7 @@ export default function WorkOrderShowPage({
                         Volver a órdenes
                     </Link>
                     <h1 className="relative inline-block font-semibold text-foreground text-xl tracking-tight pb-1">
-                        {showDataTab ? vehicleLabel : `Configuración · ${vehicleLabel}`}
+                        {headingLabel}
                         <span className="absolute bottom-0 left-0 h-0.5 w-8 rounded-full bg-primary" aria-hidden />
                     </h1>
                     <p className="text-muted-foreground text-sm">{clientLabel}</p>
@@ -233,8 +258,28 @@ export default function WorkOrderShowPage({
                                 Abonado: S/ {Number(paymentsTotalPaid).toFixed(2)}
                             </span>
                         )}
+                        {isDelivered && summaryPdfUrl && (
+                            <button
+                                type="button"
+                                onClick={() => setSummaryPdfOpen(true)}
+                                className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[#1c2d4f]/30 bg-[#1c2d4f] px-3 py-1 text-xs font-medium text-white hover:bg-[#243a66] transition-colors"
+                            >
+                                <FileDown className="size-3.5" />
+                                Ver / Imprimir PDF
+                            </button>
+                        )}
                     </div>
                 </header>
+
+                {isDelivered && (
+                    <div
+                        role="note"
+                        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400"
+                    >
+                        <Lock className="size-3.5 shrink-0" />
+                        <span>Esta orden fue entregada. El contenido es de solo lectura.</span>
+                    </div>
+                )}
 
                 {flashStockWarnings.length > 0 && (
                     <div
@@ -250,7 +295,7 @@ export default function WorkOrderShowPage({
                 )}
 
                 <div className="flex gap-1 rounded-lg border border-content-border bg-content-muted/30 p-1" role="tablist" aria-label="Secciones de la orden">
-                    {showDataTab && (
+                    {effectiveShowDataTab && (
                         <button
                             type="button"
                             role="tab"
@@ -347,7 +392,7 @@ export default function WorkOrderShowPage({
                     )}
                 </div>
 
-                {showDataTab && activeTab === 'datos' && (
+                {effectiveShowDataTab && activeTab === 'datos' && (
                     <DataTab
                         workOrder={workOrder}
                         can={can}
@@ -390,6 +435,7 @@ export default function WorkOrderShowPage({
                         confirmRepairButtonLabel={confirmRepairButtonLabel}
                         onConfirmRepair={handleConfirmRepair}
                         onOpenPrintModal={setPendingPrintUrl}
+                        markReadyPath={markReadyPath}
                     />
                 )}
                 {(can.diagnoses_view ?? true) && activeTab === 'diagnosticos' && (
@@ -416,6 +462,54 @@ export default function WorkOrderShowPage({
                 workOrder={workOrder as Parameters<typeof DeleteWorkOrderDialog>[0]['workOrder']}
                 workOrdersIndexPath={workOrdersIndexPath}
             />
+
+            {/* ── Modal de vista previa PDF resumen ─────────────────── */}
+            {summaryPdfUrl && (
+                <Dialog open={summaryPdfOpen} onOpenChange={setSummaryPdfOpen}>
+                    <DialogContent className="border-content-border bg-card w-[calc(100%-1rem)] max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+                        <DialogHeader className="px-4 pt-4 pb-3 border-b border-content-border shrink-0">
+                            <DialogTitle className="text-foreground text-sm font-semibold">
+                                Resumen de orden — {workOrder.vehicle?.plate ?? `#${workOrder.id}`}
+                            </DialogTitle>
+                            <DialogDescription className="sr-only">Vista previa del PDF de resumen</DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex-1 overflow-hidden">
+                            <iframe
+                                ref={summaryIframeRef}
+                                src={summaryPdfUrl}
+                                title="PDF Resumen"
+                                className="w-full h-full border-0"
+                            />
+                        </div>
+
+                        <DialogFooter className="px-4 py-3 border-t border-content-border shrink-0 flex flex-wrap gap-2 sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setSummaryPdfOpen(false)}
+                                className="cursor-pointer border-content-border min-w-0 flex-1 sm:flex-none"
+                            >
+                                Cerrar
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    try {
+                                        summaryIframeRef.current?.contentWindow?.print();
+                                    } catch {
+                                        window.open(summaryPdfUrl, '_blank');
+                                    }
+                                }}
+                                className="cursor-pointer min-w-0 flex-1 sm:flex-none bg-[#1c2d4f] text-white hover:bg-[#243a66]"
+                            >
+                                <Printer className="mr-2 size-4" />
+                                Imprimir
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             <Dialog open={pendingPrintUrl !== null} onOpenChange={handleClosePrintModal}>
                 <DialogContent className="cursor-pointer border-content-border bg-card w-[calc(100%-1rem)] max-w-md sm:max-w-lg">

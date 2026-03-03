@@ -22,6 +22,14 @@ class ServicePackage extends Model
         'service_type_id',
         'status',
         'sort_order',
+        'interval_km',
+        'interval_days',
+    ];
+
+    /** @var array<string, string> */
+    protected $casts = [
+        'interval_km'   => 'integer',
+        'interval_days' => 'integer',
     ];
 
     /**

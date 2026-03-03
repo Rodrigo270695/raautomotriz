@@ -6,16 +6,14 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::get('/', function () {
+    $activePromotion = \App\Models\Promotion::currentlyActive()
+        ->select('id', 'title', 'description', 'image_path')
+        ->latest()
+        ->first();
+
     return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-        // Hero: cuando tengas panel admin, estos datos vendrán de BD/config
-        'hero' => [
-            'type' => 'image', // 'video' | 'image'
-            'video_url' => null,
-            'image_url' => null,
-            'title' => 'RA AUTOMOTRIZ',
-            'subtitle' => 'Taller mecánico de confianza. Reparación, mantenimiento y diagnóstico profesional.',
-        ],
+        'canRegister'     => Features::enabled(Features::registration()),
+        'activePromotion' => $activePromotion,
     ]);
 })->name('home');
 
@@ -203,6 +201,18 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
         Route::delete('packages/{service_package}/items/{item}', [\App\Http\Controllers\Dashboard\Services\ServicePackageItemController::class, 'destroy'])
             ->middleware('permission:service_package_items.delete')
             ->name('packages.items.destroy');
+        Route::get('maintenance-schedules', [\App\Http\Controllers\Dashboard\Services\MaintenanceSchedulesController::class, 'index'])
+            ->middleware('permission:maintenance_schedules.view')
+            ->name('maintenance-schedules.index');
+        Route::post('maintenance-schedules/{schedule}/resend-notification', [\App\Http\Controllers\Dashboard\Services\MaintenanceSchedulesController::class, 'resendNotification'])
+            ->middleware('permission:maintenance_schedules.resend_notification')
+            ->name('maintenance-schedules.resend-notification');
+        Route::get('accounts-receivable', [\App\Http\Controllers\Dashboard\Services\AccountsReceivableController::class, 'index'])
+            ->middleware('permission:accounts_receivable.view')
+            ->name('accounts-receivable.index');
+        Route::get('accounts-receivable/export', [\App\Http\Controllers\Dashboard\Services\AccountsReceivableController::class, 'export'])
+            ->middleware('permission:accounts_receivable.export')
+            ->name('accounts-receivable.export');
         Route::get('work-orders/search-clients', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'searchClients'])
             ->middleware('permission:work_orders.view')
             ->name('work-orders.search-clients');
@@ -275,12 +285,52 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
         Route::get('work-orders/{work_order}/payments/{payment}/print', [\App\Http\Controllers\Dashboard\Services\WorkOrderPaymentController::class, 'printTicket'])
             ->middleware('permission:work_order_payments.view')
             ->name('work-orders.payments.print');
+        Route::post('work-orders/{work_order}/payments/{payment}/resend-notification', [\App\Http\Controllers\Dashboard\Services\WorkOrderPaymentController::class, 'resendNotification'])
+            ->middleware('permission:work_order_payments.resend_notification')
+            ->name('work-orders.payments.resend-notification');
         Route::post('work-orders/{work_order}/confirm-repair', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'confirmRepair'])
             ->middleware('permission:work_orders.update')
             ->name('work-orders.confirm-repair');
+        Route::post('work-orders/{work_order}/mark-ready', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'markReadyToDeliver'])
+            ->middleware('permission:work_orders.update')
+            ->name('work-orders.mark-ready');
+        Route::post('work-orders/{work_order}/mark-delivered', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'markDelivered'])
+            ->middleware('permission:work_orders.mark_delivered')
+            ->name('work-orders.mark-delivered');
+        Route::get('work-orders/{work_order}/summary/pdf', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'printSummaryPdf'])
+            ->middleware('permission:work_orders.print_summary')
+            ->name('work-orders.summary.pdf');
         Route::get('work-orders/{work_order}/tickets/{ticket}/print', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'printTicket'])
             ->middleware('permission:work_order_tickets.print')
             ->name('work-orders.tickets.print');
+    });
+
+    // Marketing
+    Route::prefix('marketing')->name('marketing.')->group(function () {
+        Route::get('promotions', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'index'])
+            ->middleware('permission:promotions.view')
+            ->name('promotions.index');
+        Route::post('promotions', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'store'])
+            ->middleware('permission:promotions.create')
+            ->name('promotions.store');
+        Route::post('promotions/{promotion}', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'update'])
+            ->middleware('permission:promotions.update')
+            ->name('promotions.update');
+        Route::delete('promotions/{promotion}', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'destroy'])
+            ->middleware('permission:promotions.delete')
+            ->name('promotions.destroy');
+        Route::post('promotions/{promotion}/toggle-active', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'toggleActive'])
+            ->middleware('permission:promotions.update')
+            ->name('promotions.toggle-active');
+        Route::post('promotions/{promotion}/send-notification', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'sendNotification'])
+            ->middleware('permission:promotions.send_notification')
+            ->name('promotions.send-notification');
+        Route::get('promotions/{promotion}/sends', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'sends'])
+            ->middleware('permission:promotions.view')
+            ->name('promotions.sends');
+        Route::get('promotions/{promotion}/send-stream', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'sendStream'])
+            ->middleware('permission:promotions.send_notification')
+            ->name('promotions.send-stream');
     });
 });
 

@@ -98,6 +98,16 @@ export type WorkOrder = {
     notes: string | null;
     vehicle?: Vehicle;
     client?: Client;
+    // Computed en el index para el dialog de entrega
+    can_mark_delivered?: boolean;
+    mark_deliver_path?: string | null;
+    can_edit?: boolean;
+    can_delete?: boolean;
+    can_view_summary?: boolean;
+    can_print_summary?: boolean;
+    total_paid?: number;
+    min_interval_days?: number | null;
+    min_interval_km?: number | null;
 };
 
 export const STATUS_LABELS: Record<string, string> = {
@@ -142,5 +152,6 @@ export type WorkOrderShowCan = {
     payments_create?: boolean;
     payments_delete?: boolean;
     payments_print_ticket?: boolean;
+    payments_resend_notification?: boolean;
     tickets_print?: boolean;
 };

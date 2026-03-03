@@ -1,8 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { router } from '@inertiajs/react';
-import { Package, Tag, Plus, Wrench, ShoppingCart, Save } from 'lucide-react';
+import { Package, Tag, Plus, Wrench, ShoppingCart, Save, CheckCircle } from 'lucide-react';
 import ReactSelect from 'react-select';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { ActionButtons } from '@/components/actions';
 import { DataTableCard } from '@/components/data-table/DataTableCard';
 import type { WorkOrderServiceItem, WorkOrderShowCan, WorkOrderPackageOption } from '../types';
@@ -42,6 +51,7 @@ type ServicesTabProps = {
     confirmRepairButtonLabel?: string;
     onConfirmRepair?: () => void;
     onOpenPrintModal?: (url: string) => void;
+    markReadyPath?: string;
 };
 
 function formatCurrency(value: number): string {
@@ -75,6 +85,7 @@ export function ServicesTab({
     confirmRepairButtonLabel = 'Guardar e iniciar reparación',
     onConfirmRepair,
     onOpenPrintModal,
+    markReadyPath,
 }: ServicesTabProps) {
     const hasServices = services.length > 0;
     const packageOptions = packagesForSelect ?? [];
@@ -86,8 +97,26 @@ export function ServicesTab({
     const [productFormOpen, setProductFormOpen] = useState(false);
     const [selectedPackageId, setSelectedPackageId] = useState<string>('');
     const [applyingPackage, setApplyingPackage] = useState(false);
+    const [markReadyOpen, setMarkReadyOpen] = useState(false);
+    const [markingReady, setMarkingReady] = useState(false);
 
     const canModify = can.update ?? false;
+
+    const showMarkReadyButton =
+        canModify &&
+        markReadyPath &&
+        !['listo_para_entregar', 'entregado', 'cancelado'].includes(workOrderStatus);
+
+    const handleMarkReady = () => {
+        if (!markReadyPath) return;
+        setMarkingReady(true);
+        router.post(markReadyPath, {}, {
+            onFinish: () => {
+                setMarkingReady(false);
+                setMarkReadyOpen(false);
+            },
+        });
+    };
     /** Línea ya guardada (existía cuando se generó el último ticket): solo se puede eliminar (devolver a stock), no editar. */
     const isSavedLine = (index: number) =>
         workOrderStatus === 'en_reparacion' &&
@@ -482,6 +511,61 @@ export function ServicesTab({
                 can={can}
                 onOpenPrintModal={onOpenPrintModal}
             />
+
+            {showMarkReadyButton && (
+                <div className="flex justify-end pt-1">
+                    <Button
+                        type="button"
+                        onClick={() => setMarkReadyOpen(true)}
+                        className="cursor-pointer gap-2 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+                    >
+                        <CheckCircle className="size-4" />
+                        Listo para entregar
+                    </Button>
+                </div>
+            )}
+
+            <Dialog open={markReadyOpen} onOpenChange={setMarkReadyOpen}>
+                <DialogContent className="border-content-border bg-card w-[calc(100%-1rem)] max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-foreground">¿Marcar como listo para entregar?</DialogTitle>
+                        <DialogDescription className="sr-only">Confirmar cambio de estado</DialogDescription>
+                    </DialogHeader>
+                    <Separator className="bg-content-border" />
+                    <p className="text-sm text-muted-foreground">
+                        El estado de la orden cambiará a <span className="font-medium text-foreground">Listo para entregar</span>. Podrás continuar editando si es necesario.
+                    </p>
+                    <DialogFooter className="flex flex-wrap gap-2 sm:justify-end sm:gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setMarkReadyOpen(false)}
+                            disabled={markingReady}
+                            className="cursor-pointer border-content-border min-w-0 flex-1 sm:flex-none"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleMarkReady}
+                            disabled={markingReady}
+                            className="cursor-pointer min-w-0 flex-1 sm:flex-none bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+                        >
+                            {markingReady ? (
+                                <span className="flex items-center gap-1.5">
+                                    <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                    Guardando…
+                                </span>
+                            ) : (
+                                <>
+                                    <CheckCircle className="size-4" />
+                                    Confirmar
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {canModify && servicesBasePath && (
                 <>
