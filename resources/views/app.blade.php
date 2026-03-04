@@ -3,7 +3,8 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-
+        <meta name="google-site-verification" content="Q5UrwDKnL0PrOh9bG2807sznWjQ93Okgn2kgIAisn9s" />
+        
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
@@ -38,8 +39,9 @@
         <meta name="apple-mobile-web-app-title" content="RA AUTOMOTRIZ">
 
         <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/ralogo.png" type="image/png">
-        <link rel="shortcut icon" href="/ralogo.png" type="image/png">
+        <link rel="shortcut icon" href="/favicon.ico">
         <link rel="apple-touch-icon" href="/ralogo.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">

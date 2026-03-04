@@ -26,6 +26,10 @@ const getBreadcrumbs = (rolesPath: string): BreadcrumbItem[] => [
     { title: 'Roles', href: rolesPath },
 ];
 
+/** Roles que no se pueden editar ni eliminar (ni siquiera por superadmin). */
+const PROTECTED_ROLE_NAMES = ['superadmin', 'cliente'];
+const isRoleProtected = (roleName: string) => PROTECTED_ROLE_NAMES.includes(roleName);
+
 type RolesIndexProps = {
     roles: PaginatedResponse<Role>;
     filters: {
@@ -107,17 +111,20 @@ export default function RolesIndex({ roles, filters, rolesIndexPath, stats, perm
             key: 'actions',
             label: 'Acciones',
             className: 'w-[100px] text-right',
-            render: (r: Role) => (
-                <ActionButtons
-                    canEdit={can.update}
-                    canDelete={can.delete}
-                    canAssignPermissions={can.assign_permissions}
-                    onEdit={() => openEdit(r)}
-                    onDelete={() => setDeleteRole(r)}
-                    onAssignPermissions={() => setRoleForPermissions(r)}
-                    deleteUrl={can.delete ? `${rolesIndexPath}/${r.id}` : undefined}
-                />
-            ),
+            render: (r: Role) => {
+                const protectedRole = isRoleProtected(r.name);
+                return (
+                    <ActionButtons
+                        canEdit={can.update && !protectedRole}
+                        canDelete={can.delete && !protectedRole}
+                        canAssignPermissions={can.assign_permissions}
+                        onEdit={() => openEdit(r)}
+                        onDelete={() => setDeleteRole(r)}
+                        onAssignPermissions={() => setRoleForPermissions(r)}
+                        deleteUrl={can.delete && !protectedRole ? `${rolesIndexPath}/${r.id}` : undefined}
+                    />
+                );
+            },
         },
     ];
 
@@ -288,15 +295,17 @@ export default function RolesIndex({ roles, filters, rolesIndexPath, stats, perm
                             </div>
                         ) : (
                             <ul className="flex flex-col gap-3 p-3 sm:p-4">
-                                {roles.data.map((role) => (
+                                {roles.data.map((role) => {
+                                    const protectedRole = isRoleProtected(role.name);
+                                    return (
                                     <li key={role.id}>
                                         <DataTableCard
                                             title={role.name}
                                             actions={
                                                 <ActionButtons
                                                     showLabels
-                                                    canEdit={can.update}
-                                                    canDelete={can.delete}
+                                                    canEdit={can.update && !protectedRole}
+                                                    canDelete={can.delete && !protectedRole}
                                                     canAssignPermissions={can.assign_permissions}
                                                     onEdit={() => openEdit(role)}
                                                     onDelete={() =>
@@ -306,7 +315,7 @@ export default function RolesIndex({ roles, filters, rolesIndexPath, stats, perm
                                                         setRoleForPermissions(role)
                                                     }
                                                     deleteUrl={
-                                                        can.delete
+                                                        can.delete && !protectedRole
                                                             ? `${rolesIndexPath}/${role.id}`
                                                             : undefined
                                                     }
@@ -320,7 +329,8 @@ export default function RolesIndex({ roles, filters, rolesIndexPath, stats, perm
                                             ]}
                                         />
                                     </li>
-                                ))}
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>
