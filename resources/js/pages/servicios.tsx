@@ -8,6 +8,17 @@ import {
 } from 'lucide-react';
 import WelcomeNavbar from '@/components/welcome/WelcomeNavbar';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter';
+import ScrollToTopFAB from '@/components/welcome/sections/ScrollToTopFAB';
+import SoraFAB from '@/components/welcome/SoraFAB';
+
+const BREADCRUMB_LD = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Inicio',    item: 'https://raautomotriz.com/' },
+        { '@type': 'ListItem', position: 2, name: 'Servicios', item: 'https://raautomotriz.com/servicios' },
+    ],
+});
 
 /* ── Data ───────────────────────────────────────────────────────────────── */
 const SERVICES = [
@@ -184,11 +195,28 @@ export default function Servicios() {
     return (
         <>
             <Head title="Servicios - RA AUTOMOTRIZ | Mecánica automotriz en Chiclayo">
-                <meta name="description"  content="Servicios de RA AUTOMOTRIZ: reparación de motores, frenos, suspensión, dirección, sistema eléctrico, scanner OBD2, cambio de aceite, planchado, pintura, alineamiento y GLP. Chiclayo." />
-                <meta name="robots"       content="index, follow" />
-                <link rel="canonical"     href="https://raautomotriz.com/servicios" />
-                <meta property="og:title" content="Servicios – RA AUTOMOTRIZ | Taller mecánico Chiclayo" />
-                <meta property="og:image" content="https://raautomotriz.com/logorasf.png" />
+                <meta name="description"        content="Servicios de RA AUTOMOTRIZ: reparación de motores, frenos, suspensión, dirección, sistema eléctrico, scanner OBD2, cambio de aceite, planchado, pintura, alineamiento y GLP en Chiclayo." />
+                <meta name="keywords"           content="servicios taller mecánico Chiclayo, reparación motores Chiclayo, cambio aceite Chiclayo, scanner OBD2, planchado pintura Chiclayo, alineamiento balanceo, instalación GLP Chiclayo" />
+                <meta name="author"             content="RA AUTOMOTRIZ" />
+                <meta name="robots"             content="index, follow, max-snippet:-1, max-image-preview:large" />
+                <meta name="geo.region"         content="PE-LAM" />
+                <meta name="geo.placename"      content="Chiclayo, Lambayeque, Perú" />
+                <link rel="canonical"           href="https://raautomotriz.com/servicios" />
+                <meta property="og:type"        content="website" />
+                <meta property="og:url"         content="https://raautomotriz.com/servicios" />
+                <meta property="og:site_name"   content="RA AUTOMOTRIZ" />
+                <meta property="og:locale"      content="es_PE" />
+                <meta property="og:title"       content="Servicios – RA AUTOMOTRIZ | Taller mecánico Chiclayo" />
+                <meta property="og:description" content="Motor, frenos, suspensión, eléctrico, scanner OBD2, planchado, pintura, GLP y más. Todo con garantía en Chiclayo." />
+                <meta property="og:image"       content="https://raautomotriz.com/ra/dise%C3%B1o/5.jpeg" />
+                <meta property="og:image:alt"   content="Servicios de mecánica automotriz – RA AUTOMOTRIZ Chiclayo" />
+                <meta name="twitter:card"       content="summary_large_image" />
+                <meta name="twitter:site"       content="@raautomotriz" />
+                <meta name="twitter:title"      content="Servicios – RA AUTOMOTRIZ | Chiclayo" />
+                <meta name="twitter:description" content="10 especialidades: motor, frenos, scanner OBD2, planchado, GLP y más. Garantía en cada trabajo." />
+                <meta name="twitter:image"      content="https://raautomotriz.com/ra/dise%C3%B1o/5.jpeg" />
+                <link rel="preload"             href="/ra/dise%C3%B1o/5.jpeg" as="image" type="image/jpeg" fetchPriority="high" />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: BREADCRUMB_LD }} />
             </Head>
             <div className="flex min-h-screen flex-col bg-[#FDFDFC] dark:bg-[#0a0a0a]">
                 <WelcomeNavbar />
@@ -200,6 +228,8 @@ export default function Servicios() {
                 </main>
                 <WelcomeFooter />
             </div>
+            <SoraFAB />
+            <ScrollToTopFAB />
         </>
     );
 }

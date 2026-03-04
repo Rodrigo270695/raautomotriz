@@ -1,9 +1,17 @@
 <?php
 
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\SoraChatController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+
+Route::get('/manifest.webmanifest', function () {
+    $path = public_path('manifest.webmanifest');
+    abort_unless(file_exists($path), 404);
+
+    return response()->file($path, ['Content-Type' => 'application/manifest+json']);
+})->name('manifest');
 
 Route::get('/', function () {
     $activePromotion = \App\Models\Promotion::currentlyActive()
@@ -29,10 +37,32 @@ Route::get('contacto', function () {
     return Inertia::render('contacto');
 })->name('contacto');
 
+/* ── SORA Chat AI ─────────────────────────────────────────────────────────── */
+Route::get('api/sora/session', [SoraChatController::class, 'session'])
+    ->middleware('throttle:60,1')
+    ->name('sora.session');
+Route::post('api/sora/chat', [SoraChatController::class, 'chat'])
+    ->middleware('throttle:30,1')
+    ->name('sora.chat');
+
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])
         ->middleware('permission:dashboard.view')
         ->name('index');
+
+    // Mis órdenes (cliente: órdenes propias)
+    Route::get('my-orders', [\App\Http\Controllers\Dashboard\MyOrdersController::class, 'index'])
+        ->middleware('permission:my_orders.view')
+        ->name('my-orders.index');
+    Route::get('my-orders/history', [\App\Http\Controllers\Dashboard\MyOrdersController::class, 'history'])
+        ->middleware('permission:my_orders_history.view')
+        ->name('my-orders.history');
+    Route::get('my-orders/{work_order}', [\App\Http\Controllers\Dashboard\MyOrdersController::class, 'show'])
+        ->middleware('permission:my_orders.view')
+        ->name('my-orders.show');
+    Route::get('my-vehicles', [\App\Http\Controllers\Dashboard\MyVehiclesController::class, 'index'])
+        ->middleware('permission:my_vehicles.view')
+        ->name('my-vehicles.index');
 
     // Usuarios (listado): redirige al índice de users
     Route::get('usuarios', fn () => redirect()->route('dashboard.users.index'))->name('usuarios');
@@ -283,8 +313,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
             ->middleware('permission:work_order_payments.delete')
             ->name('work-orders.payments.destroy');
         Route::get('work-orders/{work_order}/payments/{payment}/print', [\App\Http\Controllers\Dashboard\Services\WorkOrderPaymentController::class, 'printTicket'])
-            ->middleware('permission:work_order_payments.view')
             ->name('work-orders.payments.print');
+        Route::get('work-orders/{work_order}/payments/{payment}/receipt-pdf', [\App\Http\Controllers\Dashboard\Services\WorkOrderPaymentController::class, 'downloadReceiptPdf'])
+            ->name('work-orders.payments.receipt-pdf');
         Route::post('work-orders/{work_order}/payments/{payment}/resend-notification', [\App\Http\Controllers\Dashboard\Services\WorkOrderPaymentController::class, 'resendNotification'])
             ->middleware('permission:work_order_payments.resend_notification')
             ->name('work-orders.payments.resend-notification');
@@ -298,7 +329,6 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
             ->middleware('permission:work_orders.mark_delivered')
             ->name('work-orders.mark-delivered');
         Route::get('work-orders/{work_order}/summary/pdf', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'printSummaryPdf'])
-            ->middleware('permission:work_orders.print_summary')
             ->name('work-orders.summary.pdf');
         Route::get('work-orders/{work_order}/tickets/{ticket}/print', [\App\Http\Controllers\Dashboard\Services\WorkOrderController::class, 'printTicket'])
             ->middleware('permission:work_order_tickets.print')
@@ -331,6 +361,13 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard.')
         Route::get('promotions/{promotion}/send-stream', [\App\Http\Controllers\Dashboard\Marketing\PromotionController::class, 'sendStream'])
             ->middleware('permission:promotions.send_notification')
             ->name('promotions.send-stream');
+
+        Route::get('sora-conversations', [\App\Http\Controllers\Dashboard\Marketing\SoraConversationsController::class, 'index'])
+            ->middleware('permission:sora_conversations.view')
+            ->name('sora-conversations.index');
+        Route::get('sora-appointments', [\App\Http\Controllers\Dashboard\Marketing\SoraAppointmentsController::class, 'index'])
+            ->middleware('permission:sora_appointments.view')
+            ->name('sora-appointments.index');
     });
 });
 

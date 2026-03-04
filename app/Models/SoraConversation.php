@@ -10,8 +10,13 @@ class SoraConversation extends Model
 {
     protected $fillable = [
         'user_id',
+        'guest_name',
+        'guest_phone',
         'session_id',
+        'ip_address',
         'vehicle_plate',
+        'vehicle_brand',
+        'vehicle_model',
         'problem_summary',
         'preliminary_diagnoses',
         'status',
@@ -31,6 +36,11 @@ class SoraConversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(SoraMessage::class, 'conversation_id');
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(SoraAppointment::class, 'conversation_id');
     }
 
     public function isActive(): bool

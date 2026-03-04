@@ -119,7 +119,7 @@ export default function Login({
                                 />
                                 <Label
                                     htmlFor="remember"
-                                    className={`cursor-pointer font-normal text-[#f8fafc] text-sm`}
+                                    className="cursor-pointer font-medium text-[#f8fafc] text-sm select-none"
                                 >
                                     Recordarme
                                 </Label>

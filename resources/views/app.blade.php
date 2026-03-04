@@ -32,8 +32,14 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <link rel="icon"             href="/ralogo.png" type="image/png">
-        <link rel="shortcut icon"    href="/ralogo.png" type="image/png">
+        <meta name="theme-color" content="#0f172a">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="RA AUTOMOTRIZ">
+
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="icon" href="/ralogo.png" type="image/png">
+        <link rel="shortcut icon" href="/ralogo.png" type="image/png">
         <link rel="apple-touch-icon" href="/ralogo.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -45,5 +51,12 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+                });
+            }
+        </script>
     </body>
 </html>

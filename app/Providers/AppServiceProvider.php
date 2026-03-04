@@ -30,12 +30,26 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Superadmin bypasses all Gate/permission checks (Spatie recommended pattern).
+     * Abilities that superadmin does NOT bypass; they are checked against the role's assigned permissions.
+     * Use this for sensitive permissions (e.g. financial) so revoking them for superadmin takes effect.
+     */
+    protected const SUPERADMIN_RESPECT_ABILITIES = [
+        'dashboard.view_financial',
+    ];
+
+    /**
+     * Superadmin bypasses all Gate/permission checks, except those in SUPERADMIN_RESPECT_ABILITIES.
      */
     protected function configureSuperadminGate(): void
     {
         Gate::before(function (User $user, string $ability) {
-            return $user->hasRole('superadmin') ? true : null;
+            if (! $user->hasRole('superadmin')) {
+                return null;
+            }
+            if (in_array($ability, self::SUPERADMIN_RESPECT_ABILITIES, true)) {
+                return null; // let Spatie check the role's actual permissions
+            }
+            return true;
         });
     }
 

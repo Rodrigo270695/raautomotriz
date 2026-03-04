@@ -174,8 +174,14 @@
         @apply border-border;
     }
 
+    html {
+        /* Deja que el navegador maneje el scroll vertical normalmente */
+    }
+
     body {
         @apply bg-background text-foreground;
+        /* Evita que cualquier overflow horizontal (por menús / sombras) genere espacio en blanco o scroll lateral */
+        overflow-x: hidden;
     }
 
     /* Resaltado de texto (selección): azul marino */

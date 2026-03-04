@@ -11,6 +11,15 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Elimina conversaciones de invitados (sin usuario) del día anterior para proteger la privacidad
+Schedule::call(function () {
+    \App\Models\SoraConversation::whereNull('user_id')
+        ->where('created_at', '<', now()->subDay())
+        ->delete(); // cascadeOnDelete elimina también los sora_messages
+})->dailyAt('03:00')
+  ->timezone('America/Lima')
+  ->name('sora:cleanup-guest-conversations');
+
 // Revisa diariamente a la hora configurada (Lima) si hay vehículos próximos a mantenimiento
 Schedule::job(new CheckMaintenanceAlertsJob)
     ->dailyAt(env('MAINTENANCE_ALERT_HOUR', '08:00'))

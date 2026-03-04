@@ -20,6 +20,7 @@ import {
     Car,
     ChevronDown,
     ChevronRight,
+    ClipboardList,
     KeyRound,
     LayoutGrid,
     Loader2,
@@ -33,6 +34,7 @@ export type PermissionsGrouped = Record<string, string[]>;
 const actionLabels: Record<string, string> = {
     send_notification: 'Enviar notificación a clientes',
     view: 'Ver',
+    view_financial: 'Ver detalle financiero (ingresos, inventario)',
     create: 'Crear',
     update: 'Editar',
     delete: 'Eliminar',
@@ -117,7 +119,31 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
         });
     }
 
-    // 2. Usuarios (grupo con Roles y Usuarios, como en el sidebar)
+    // 2. Mis órdenes (Mis Órdenes + Mis Vehículos + Mi Historial)
+    const myOrdersActions = permissionsGrouped['my_orders'] ?? [];
+    const myOrdersPerms: Array<{ name: string; label: string }> = myOrdersActions.map((action) => ({
+        name: `my_orders.${action}`,
+        label: getActionLabel(action),
+    }));
+    const myVehiclesActions = permissionsGrouped['my_vehicles'] ?? [];
+    const myVehiclesPerms: Array<{ name: string; label: string }> = myVehiclesActions.map((action) => ({
+        name: `my_vehicles.${action}`,
+        label: getActionLabel(action),
+    }));
+    const myOrdersHistoryActions = permissionsGrouped['my_orders_history'] ?? [];
+    const myOrdersHistoryPerms: Array<{ name: string; label: string }> = myOrdersHistoryActions.map((action) => ({
+        name: `my_orders_history.${action}`,
+        label: getActionLabel(action),
+    }));
+    const misOrdenesChildren: MenuItem[] = [];
+    if (myOrdersPerms.length) misOrdenesChildren.push({ id: 'my_orders', label: 'Mis Órdenes', permissions: myOrdersPerms });
+    if (myVehiclesPerms.length) misOrdenesChildren.push({ id: 'my_vehicles', label: 'Mis Vehículos', permissions: myVehiclesPerms });
+    if (myOrdersHistoryPerms.length) misOrdenesChildren.push({ id: 'my_orders_history', label: 'Mi Historial', permissions: myOrdersHistoryPerms });
+    if (misOrdenesChildren.length) {
+        result.push({ id: 'mis_ordenes', label: 'Mis órdenes', children: misOrdenesChildren });
+    }
+
+    // 3. Usuarios (grupo con Roles y Usuarios, como en el sidebar)
     const rolesActions = permissionsGrouped['roles'] ?? [];
     const usersActions = permissionsGrouped['users'] ?? [];
     const rolesPerms: Array<{ name: string; label: string }> = rolesActions.map((action) => ({
@@ -264,6 +290,16 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
         name: `promotions.${action}`,
         label: getActionLabel(action),
     }));
+    const soraConversationsActions = permissionsGrouped['sora_conversations'] ?? [];
+    const soraConversationsPerms: Array<{ name: string; label: string }> = soraConversationsActions.map((action) => ({
+        name: `sora_conversations.${action}`,
+        label: getActionLabel(action),
+    }));
+    const soraAppointmentsActions = permissionsGrouped['sora_appointments'] ?? [];
+    const soraAppointmentsPerms: Array<{ name: string; label: string }> = soraAppointmentsActions.map((action) => ({
+        name: `sora_appointments.${action}`,
+        label: getActionLabel(action),
+    }));
     const servicioChildren: MenuItem[] = [];
     if (serviceChecklistsPerms.length) servicioChildren.push({ id: 'service_checklists', label: 'Lista de chequeo', permissions: serviceChecklistsPerms });
     if (serviceTypesPerms.length) servicioChildren.push({ id: 'service_types', label: 'Tipo de servicio', permissions: serviceTypesPerms });
@@ -285,6 +321,8 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
     // Marketing
     const marketingChildren: MenuItem[] = [];
     if (promotionsPerms.length) marketingChildren.push({ id: 'promotions', label: 'Promociones', permissions: promotionsPerms });
+    if (soraConversationsPerms.length) marketingChildren.push({ id: 'sora_conversations', label: 'Conversaciones SORA', permissions: soraConversationsPerms });
+    if (soraAppointmentsPerms.length) marketingChildren.push({ id: 'sora_appointments', label: 'Citas SORA', permissions: soraAppointmentsPerms });
     if (marketingChildren.length) {
         result.push({ id: 'marketing', label: 'Marketing', children: marketingChildren });
     }
@@ -295,6 +333,16 @@ function buildMenuTree(permissionsGrouped: PermissionsGrouped): MenuTreeNode[] {
 /** Items del sidebar para la vista previa: permiso que controla visibilidad */
 const SIDEBAR_PREVIEW_ITEMS = [
     { permission: 'dashboard.view' as string | null, label: 'Panel de control', icon: LayoutGrid },
+    {
+        permission: null,
+        label: 'Mis órdenes',
+        icon: ClipboardList,
+        children: [
+            { permission: 'my_orders.view', label: 'Mis Órdenes', icon: ClipboardList },
+            { permission: 'my_vehicles.view', label: 'Mis Vehículos', icon: ClipboardList },
+            { permission: 'my_orders_history.view', label: 'Mi Historial', icon: ClipboardList },
+        ],
+    },
     {
         permission: null,
         label: 'Usuarios',
@@ -355,6 +403,8 @@ const SIDEBAR_PREVIEW_ITEMS = [
         icon: LayoutGrid,
         children: [
             { permission: 'promotions.view', label: 'Promociones', icon: LayoutGrid },
+            { permission: 'sora_conversations.view', label: 'Conversaciones SORA', icon: LayoutGrid },
+            { permission: 'sora_appointments.view', label: 'Citas SORA', icon: LayoutGrid },
         ],
     },
 ];

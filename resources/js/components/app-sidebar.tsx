@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Car, LayoutGrid, Megaphone, Package, Users, Wrench } from 'lucide-react';
+import { Car, ClipboardList, LayoutGrid, Megaphone, Package, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -33,6 +33,11 @@ const WORK_ORDERS_PERMISSION = 'work_orders.view';
 const ACCOUNTS_RECEIVABLE_PERMISSION = 'accounts_receivable.view';
 const MAINTENANCE_SCHEDULES_PERMISSION = 'maintenance_schedules.view';
 const PROMOTIONS_PERMISSION = 'promotions.view';
+const SORA_CONVERSATIONS_PERMISSION = 'sora_conversations.view';
+const SORA_APPOINTMENTS_PERMISSION = 'sora_appointments.view';
+const MY_ORDERS_PERMISSION = 'my_orders.view';
+const MY_VEHICLES_PERMISSION = 'my_vehicles.view';
+const MY_ORDERS_HISTORY_PERMISSION = 'my_orders_history.view';
 
 const ALL_MAIN_NAV_ITEMS: NavItem[] = [
     {
@@ -40,6 +45,17 @@ const ALL_MAIN_NAV_ITEMS: NavItem[] = [
         href: dashboardRoute().url,
         icon: LayoutGrid,
         permission: DASHBOARD_PERMISSION,
+    },
+    {
+        title: 'Mis órdenes',
+        href: '#',
+        icon: ClipboardList,
+        permission: null,
+        items: [
+            { title: 'Mis Órdenes', href: '/dashboard/my-orders', permission: MY_ORDERS_PERMISSION },
+            { title: 'Mis Vehículos', href: '/dashboard/my-vehicles', permission: MY_VEHICLES_PERMISSION },
+            { title: 'Mi Historial', href: '/dashboard/my-orders/history', permission: MY_ORDERS_HISTORY_PERMISSION },
+        ],
     },
     {
         title: 'Usuarios',
@@ -93,6 +109,8 @@ const ALL_MAIN_NAV_ITEMS: NavItem[] = [
         permission: null,
         items: [
             { title: 'Promociones', href: '/dashboard/marketing/promotions', permission: PROMOTIONS_PERMISSION },
+            { title: 'Conversaciones SORA', href: '/dashboard/marketing/sora-conversations', permission: SORA_CONVERSATIONS_PERMISSION },
+            { title: 'Citas SORA', href: '/dashboard/marketing/sora-appointments', permission: SORA_APPOINTMENTS_PERMISSION },
         ],
     },
 ];

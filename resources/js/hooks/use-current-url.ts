@@ -30,10 +30,30 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
         const urlToCompare = currentUrl ?? currentUrlPath;
         const urlString = toUrl(urlToCheck);
 
+        // Rutas internas: permitir que los ítems de menú continúen activos
+        // cuando estamos en una vista de detalle hija (ej. /dashboard/my-orders/6).
         if (!urlString.startsWith('http')) {
-            return urlString === urlToCompare;
+            if (urlString === urlToCompare) return true;
+
+            // Considerar "activo" cuando la URL actual es un hijo numérico del recurso base.
+            // Ejemplos:
+            // - base: /dashboard/my-orders  current: /dashboard/my-orders/6         -> true
+            // - base: /dashboard/services/work-orders  current: /dashboard/services/work-orders/123/config -> true
+            // - base: /dashboard/my-orders  current: /dashboard/my-orders/history   -> false
+            const base = urlString.endsWith('/') ? urlString.slice(0, -1) : urlString;
+            const current = urlToCompare;
+
+            if (current.startsWith(`${base}/`)) {
+                const rest = current.slice(base.length + 1); // quitar "base/"
+                if (/^\d+(\/|$)/.test(rest)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
+        // Rutas absolutas externas
         try {
             const absoluteUrl = new URL(urlString);
             return absoluteUrl.pathname === urlToCompare;

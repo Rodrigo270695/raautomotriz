@@ -14,7 +14,7 @@ export const raAuthStyles = {
     linkAccent:
         'text-[#e12a2d] font-medium underline-offset-4 hover:text-[#ff4757] hover:underline transition-colors',
     checkbox:
-        'size-5 border-[#334155] data-[state=checked]:bg-[#e12a2d] data-[state=checked]:border-[#e12a2d] focus-visible:ring-[#e12a2d]/40 sm:size-4',
+        'size-5 shrink-0 rounded-[4px] border-2 border-[#64748b] bg-[#1e293b]/60 data-[state=checked]:bg-[#e12a2d] data-[state=checked]:border-[#e12a2d] data-[state=checked]:text-white focus-visible:ring-2 focus-visible:ring-[#e12a2d]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a2332] sm:size-5',
     inputError: 'text-red-400 text-sm',
     /** Select tipo documento (registro): trigger y dropdown al estilo auth RA */
     selectTrigger:

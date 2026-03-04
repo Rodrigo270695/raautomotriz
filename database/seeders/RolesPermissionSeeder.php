@@ -11,6 +11,7 @@ class RolesPermissionSeeder extends Seeder
     /** Permisos: dashboard (ver), roles, users, clients, brands (marca), vista de permisos. Todos asignados a superadmin. */
     private const PERMISSIONS = [
         'dashboard.view', // Ver / acceder al Panel de control
+        'dashboard.view_financial', // Ver resumen financiero (ingresos, valor inventario) — no lo ve el técnico
         'roles.view',
         'roles.create',
         'roles.update',
@@ -107,11 +108,17 @@ class RolesPermissionSeeder extends Seeder
         'promotions.update',
         'promotions.delete',
         'promotions.send_notification',
+        'sora_conversations.view',
+        'sora_appointments.view',
+        'my_orders.view',
+        'my_vehicles.view',
+        'my_orders_history.view',
     ];
 
     /** Permisos que el rol admin puede ejercer (todo excepto gestión de roles y superadmin). */
     private const ADMIN_PERMISSIONS = [
         'dashboard.view',
+        'dashboard.view_financial',
         'users.view', 'users.create', 'users.update', 'users.delete',
         'clients.view', 'clients.create', 'clients.update', 'clients.delete', 'clients.add_vehicle', 'clients.export',
         'brands.view', 'brands.create', 'brands.update', 'brands.delete',
@@ -134,6 +141,8 @@ class RolesPermissionSeeder extends Seeder
         'work_order_checklist_results.view', 'work_order_checklist_results.update',
         'work_order_diagnoses.view', 'work_order_diagnoses.create', 'work_order_diagnoses.update', 'work_order_diagnoses.delete',
         'promotions.view', 'promotions.create', 'promotions.update', 'promotions.delete', 'promotions.send_notification',
+        'sora_conversations.view', 'sora_appointments.view',
+        'my_orders.view', 'my_vehicles.view', 'my_orders_history.view',
     ];
 
     /** Permisos del técnico: operaciones de taller. */
@@ -147,6 +156,15 @@ class RolesPermissionSeeder extends Seeder
         'work_order_checklist_results.view', 'work_order_checklist_results.update',
         'work_order_diagnoses.view', 'work_order_diagnoses.create', 'work_order_diagnoses.update', 'work_order_diagnoses.delete',
         'work_order_tickets.print',
+        'sora_conversations.view',
+    ];
+
+    /** Permisos del rol cliente: solo panel con sus datos y mis órdenes. */
+    private const CLIENTE_PERMISSIONS = [
+        'dashboard.view',
+        'my_orders.view',
+        'my_vehicles.view',
+        'my_orders_history.view',
     ];
 
     /** Permisos del recepcionista: creación de órdenes y atención al cliente. */
@@ -186,6 +204,11 @@ class RolesPermissionSeeder extends Seeder
         $recepcionista = Role::findByName('recepcionista', 'web');
         if ($recepcionista) {
             $recepcionista->syncPermissions(self::RECEPCIONISTA_PERMISSIONS);
+        }
+
+        $cliente = Role::findByName('cliente', 'web');
+        if ($cliente) {
+            $cliente->syncPermissions(self::CLIENTE_PERMISSIONS);
         }
     }
 }

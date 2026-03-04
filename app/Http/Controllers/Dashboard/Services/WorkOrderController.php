@@ -42,8 +42,10 @@ class WorkOrderController extends Controller
     public function show(Request $request, WorkOrder $work_order): Response
     {
         $user = $request->user();
-        if ($user && (int) $user->id !== (int) $work_order->created_by && ! $user->hasRole('superadmin')) {
-            abort(403, 'Solo el creador de la orden o un superadmin puede ver esta orden.');
+        $isCreator = $user && (int) $user->id === (int) $work_order->created_by;
+        $isClient = $user && (int) $user->id === (int) $work_order->client_id && ($user->can('my_orders.view') || $user->can('my_orders_history.view'));
+        if ($user && ! $isCreator && ! $user->hasRole('superadmin') && ! $isClient) {
+            abort(403, 'No tienes permiso para ver esta orden.');
         }
 
         $this->loadWorkOrderRelations($work_order);
@@ -447,7 +449,10 @@ class WorkOrderController extends Controller
 
     public function printSummaryPdf(Request $request, WorkOrder $work_order): HttpResponse
     {
-        if (! $request->user()?->can('work_orders.print_summary')) {
+        $user = $request->user();
+        $canByRole = $user?->can('work_orders.print_summary');
+        $canAsClient = $user && (int) $work_order->client_id === (int) $user->id && $user->can('my_orders_history.view');
+        if (! $canByRole && ! $canAsClient) {
             abort(403);
         }
 

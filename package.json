@@ -9,7 +9,8 @@
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
-        "types": "tsc --noEmit"
+        "types": "tsc --noEmit",
+        "pwa:icons": "node scripts/generate-pwa-icons.cjs"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.2",
@@ -24,6 +25,7 @@
         "eslint-plugin-react-hooks": "^7.0.1",
         "prettier": "^3.8.1",
         "prettier-plugin-tailwindcss": "^0.6.14",
+        "sharp": "^0.34.5",
         "typescript-eslint": "^8.56.0"
     },
     "dependencies": {
@@ -57,6 +59,7 @@
         "react": "^19.2.4",
         "react-dom": "^19.2.4",
         "react-select": "^5.10.2",
+        "recharts": "^3.7.0",
         "sonner": "^1.7.1",
         "tailwind-merge": "^3.4.1",
         "tailwindcss": "^4.1.18",
