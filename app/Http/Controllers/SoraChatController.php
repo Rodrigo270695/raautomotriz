@@ -69,7 +69,7 @@ Reglas sobre agendar citas:
   - Día y hora aproximada en que puede traer el vehículo (hora entre 8:30 y 18:30).
   - Opcionalmente alguna nota breve (por ejemplo, si viene en grúa, si vive lejos, etc.).
 - ATENCIÓN IMPORTANTE (NO LO OLVIDES):
-  - Para una NUEVA cita: cuando confirmes en tu respuesta, agrega al final en una LÍNEA NUEVA el marcador: [[CITA]]{"date":"AAAA-MM-DD","time":"HH:MM","brand":"Marca","model":"Modelo","plate":"ABC-123","notes":"Texto opcional"}
+  - Para una NUEVA cita: cuando confirmes en tu respuesta, agrega al final en una LÍNEA NUEVA el marcador: [[CITA]] con un JSON que SIEMPRE debe llevar date, time y, para invitados, name y phone (nombre completo y celular que te dio el usuario). Formato: [[CITA]]{"date":"AAAA-MM-DD","time":"HH:MM","brand":"Marca","model":"Modelo","plate":"ABC-123","name":"Nombre completo del cliente","phone":"976123456","notes":"Texto opcional"}. Si es usuario registrado puedes omitir name y phone; si es invitado, incluye SIEMPRE name y phone con los datos que te dio en el chat.
   - Para ACTUALIZAR o CAMBIAR una cita existente (cuando el usuario diga "cambia mi cita", "actualiza la cita", "reprogramar", etc.): NO uses [[CITA]]. Usa en su lugar: [[CITA_ACTUALIZAR]]{"id":Y,"date":"AAAA-MM-DD","time":"HH:MM","notes":"opcional"} donde Y es el id de la cita que te pasamos en la lista de citas del cliente. Así se actualiza esa cita y no se crea otra.
   - Para CANCELAR o ELIMINAR una cita (cuando el usuario diga "cancela mi cita", "elimina la cita", "ya no puedo ir", etc.): usa [[CITA_ELIMINAR]]{"id":Y} donde Y es el id de la cita de la lista (solo las de hoy en adelante). Confirma al usuario que la cita quedó cancelada.
 - Usa siempre formato de 24 horas para la hora (por ejemplo 15:30).
@@ -79,7 +79,7 @@ Ejemplo de confirmación de cita (SOLO como guía, no lo repitas literal):
 
 Gracias por la información. Tu cita está confirmada para el 2026-03-05 a las 11:00 a.m. para revisar tu Toyota Corolla. Te esperamos en El Ayllu 267, La Victoria, Chiclayo.
 
-[[CITA]]{"date":"2026-03-05","time":"11:00","brand":"Toyota","model":"Corolla","plate":"ABC-123","notes":"Cita creada por SORA"}
+[[CITA]]{"date":"2026-03-05","time":"11:00","brand":"Toyota","model":"Corolla","plate":"ABC-123","name":"Rodrigo Pérez","phone":"976709811","notes":"Cita creada por SORA"}
 
 Regla sobre registro:
 - Si el usuario lleva 3 o más mensajes en la conversación y NO está registrado, recuérdale UNA SOLA VEZ de forma natural que registrarse en nuestra plataforma permite guardar su historial de consultas, de modo que cuando llegue al taller nuestros técnicos ya tendrán contexto de su caso.
@@ -446,11 +446,14 @@ PROMPT;
                         $scheduledAt = $close;
                     }
 
+                    $guestName  = $conversation->guest_name ?? ($data['name'] ?? null);
+                    $guestPhone = $conversation->guest_phone ?? ($data['phone'] ?? null);
+
                     SoraAppointment::create([
                         'conversation_id' => $conversation->id,
                         'user_id'         => $userId ?? $conversation->user_id,
-                        'guest_name'      => $conversation->guest_name ?? ($data['name'] ?? null),
-                        'guest_phone'     => $conversation->guest_phone ?? ($data['phone'] ?? null),
+                        'guest_name'      => $guestName,
+                        'guest_phone'     => $guestPhone,
                         'vehicle_brand'   => $conversation->vehicle_brand ?? ($data['brand'] ?? null),
                         'vehicle_model'   => $conversation->vehicle_model ?? ($data['model'] ?? null),
                         'vehicle_plate'   => $conversation->vehicle_plate ?? ($data['plate'] ?? null),
@@ -458,6 +461,20 @@ PROMPT;
                         'status'          => 'pending',
                         'notes'           => $data['notes'] ?? null,
                     ]);
+
+                    // Actualizar conversación con nombre/celular si vinieron en [[CITA]] y faltaban
+                    if (!$conversation->user_id) {
+                        $convUpdate = [];
+                        if (!empty($data['name']) && empty($conversation->guest_name)) {
+                            $convUpdate['guest_name'] = $data['name'];
+                        }
+                        if (!empty($data['phone']) && empty($conversation->guest_phone)) {
+                            $convUpdate['guest_phone'] = $data['phone'];
+                        }
+                        if ($convUpdate !== []) {
+                            $conversation->update($convUpdate);
+                        }
+                    }
                 } catch (\Throwable $e) {
                     Log::error('SORA appointment creation failed', [
                         'error' => $e->getMessage(),
