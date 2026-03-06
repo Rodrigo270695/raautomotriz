@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\Services\WorkOrderChecklistResultsRequest;
 use App\Http\Requests\Dashboard\Services\WorkOrderRequest;
 use App\Jobs\SendChecklistNotificationJob;
+use App\Jobs\SendDeliveredNotificationJob;
+use App\Jobs\SendReadyForDeliveryNotificationJob;
 use App\Jobs\SendWelcomeNotificationJob;
 use App\Models\ServiceChecklist;
 use App\Models\Vehicle;
@@ -411,6 +413,8 @@ class WorkOrderController extends Controller
 
         $work_order->update(['status' => 'listo_para_entregar']);
 
+        SendReadyForDeliveryNotificationJob::dispatch($work_order->id);
+
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Orden marcada como lista para entregar.']);
     }
@@ -438,10 +442,11 @@ class WorkOrderController extends Controller
 
         $work_order->update($updateData);
 
-        $nextDueDays = $request->input('next_due_days');
+        $nextDueDays    = $request->input('next_due_days');
         $nextDueDaysInt = ($nextDueDays !== null && $nextDueDays !== '') ? (int) $nextDueDays : null;
 
         UpdateMaintenanceScheduleJob::dispatch($work_order->id, $nextDueDaysInt);
+        SendDeliveredNotificationJob::dispatch($work_order->id, $nextDueDaysInt);
 
         return redirect()->back()
             ->with('flash', ['type' => 'success', 'message' => 'Orden marcada como entregada correctamente.']);
