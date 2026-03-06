@@ -128,7 +128,7 @@ export default function WelcomeFooter() {
                             </li>
                             <li className="flex gap-3">
                                 <Clock className="mt-0.5 size-4 shrink-0 text-[#D9252A]" />
-                                <span className="text-sm text-white/70">Lun – Sáb · 08:00 – 18:00</span>
+                                <span className="text-sm text-white/70">Lun – Sáb · 08:30 – 18:30</span>
                             </li>
                             <li className="flex gap-3">
                                 <MessageCircle className="mt-0.5 size-4 shrink-0 text-[#D9252A]" />

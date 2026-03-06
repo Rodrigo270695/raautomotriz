@@ -51,7 +51,7 @@ export default function CtaSection() {
                     </div>
 
                     <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-white/50">
-                        <span className="flex items-center gap-2"><Clock className="size-4 text-[#D9252A]" /> Lun – Sáb 08:00 – 18:00</span>
+                        <span className="flex items-center gap-2"><Clock className="size-4 text-[#D9252A]" /> Lun – Sáb 08:30 – 18:30</span>
                         <span className="flex items-center gap-2"><MapPin className="size-4 text-[#D9252A]" /> La Victoria, Chiclayo</span>
                     </div>
                 </motion.div>

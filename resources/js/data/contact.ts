@@ -13,5 +13,5 @@ export const CONTACT = {
     /** URL para iframe embed del mapa (coordenadas) */
     mapEmbedUrl: 'https://www.google.com/maps?q=-6.792135952183168,-79.84532009492094&z=17&output=embed',
     phone: null as string | null,
-    schedule: 'Lun – Sáb (consultar)',
+    schedule: 'Lun – Sáb 08:30 – 18:30',
 } as const;

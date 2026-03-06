@@ -43,7 +43,7 @@ const SCHEMA_LD = JSON.stringify({
     hasMap: CONTACT.googleMapsUrl,
     areaServed: { '@type': 'City', name: 'Chiclayo' },
     openingHoursSpecification: [
-        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], opens: '08:00', closes: '18:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], opens: '08:30', closes: '18:30' },
     ],
     priceRange: '$$',
     currenciesAccepted: 'PEN',

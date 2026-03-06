@@ -56,7 +56,7 @@ function InfoCards() {
         {
             icon: Clock,
             title: 'Horario de atención',
-            content: 'Lunes a Sábado\n08:00 am – 06:00 pm',
+            content: 'Lunes a Sábado\n08:30 am – 06:30 pm',
             action: null,
             color: '#1E2D4A',
         },
@@ -407,7 +407,7 @@ export default function Contacto() {
     return (
         <>
             <Head title="Contacto - RA AUTOMOTRIZ | Taller mecánico en Chiclayo">
-                <meta name="description"        content="Contacta con RA AUTOMOTRIZ en Chiclayo. Dirección: El Ayllu 267, La Victoria. Lunes a sábado 08:00–18:00. Formulario de contacto directo por WhatsApp." />
+                <meta name="description"        content="Contacta con RA AUTOMOTRIZ en Chiclayo. Dirección: El Ayllu 267, La Victoria. Lunes a sábado 08:30–18:30. Formulario de contacto directo por WhatsApp." />
                 <meta name="keywords"           content="contacto taller mecánico Chiclayo, dirección RA AUTOMOTRIZ, horario taller Chiclayo, WhatsApp mecánico Chiclayo, cómo llegar taller Chiclayo" />
                 <meta name="author"             content="RA AUTOMOTRIZ" />
                 <meta name="robots"             content="index, follow, max-snippet:-1, max-image-preview:large" />
@@ -419,13 +419,13 @@ export default function Contacto() {
                 <meta property="og:site_name"   content="RA AUTOMOTRIZ" />
                 <meta property="og:locale"      content="es_PE" />
                 <meta property="og:title"       content="Contacto – RA AUTOMOTRIZ | Taller en Chiclayo" />
-                <meta property="og:description" content="El Ayllu 267, La Victoria, Chiclayo. Lun–Sáb 08:00–18:00. Escríbenos por WhatsApp o completa el formulario de contacto." />
+                <meta property="og:description" content="El Ayllu 267, La Victoria, Chiclayo. Lun–Sáb 08:30–18:30. Escríbenos por WhatsApp o completa el formulario de contacto." />
                 <meta property="og:image"       content="https://raautomotriz.com/ra/dise%C3%B1o/21.jpeg" />
                 <meta property="og:image:alt"   content="Contacto RA AUTOMOTRIZ – Chiclayo" />
                 <meta name="twitter:card"       content="summary_large_image" />
                 <meta name="twitter:site"       content="@raautomotriz" />
                 <meta name="twitter:title"      content="Contacto – RA AUTOMOTRIZ" />
-                <meta name="twitter:description" content="El Ayllu 267, Chiclayo. Lun–Sáb 08:00–18:00. Respuesta por WhatsApp en menos de 30 minutos." />
+                <meta name="twitter:description" content="El Ayllu 267, Chiclayo. Lun–Sáb 08:30–18:30. Respuesta por WhatsApp en menos de 30 minutos." />
                 <meta name="twitter:image"      content="https://raautomotriz.com/ra/dise%C3%B1o/21.jpeg" />
                 <link rel="preload"             href="/ra/dise%C3%B1o/21.jpeg" as="image" type="image/jpeg" fetchPriority="high" />
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: BREADCRUMB_LD }} />

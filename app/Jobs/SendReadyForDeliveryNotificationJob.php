@@ -77,7 +77,7 @@ class SendReadyForDeliveryNotificationJob implements ShouldQueue
             . "Fecha/Hora : {$fechaHora}\n"
             . "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
             . "Puede pasar a recogerlo en nuestro horario de atención:\n"
-            . "Lunes a Sábado de 08:00 a 18:00.\n\n"
+            . "Lunes a Sábado de 08:30 a 18:30.\n\n"
             . "Dirección: El Ayllu 267, La Victoria, Chiclayo.\n\n"
             . "Ante cualquier consulta, estamos a su disposición. ¡Gracias por confiar en nosotros!";
 
@@ -89,7 +89,7 @@ class SendReadyForDeliveryNotificationJob implements ShouldQueue
             . "📋 *Orden N.°:* {$workOrder->id}\n"
             . "📅 *Fecha:* {$fechaHora}\n\n"
             . "📍 *Dirección:* El Ayllu 267, La Victoria, Chiclayo\n"
-            . "🕐 *Horario:* Lun–Sáb 08:00–18:00\n\n"
+            . "🕐 *Horario:* Lun–Sáb 08:30–18:30\n\n"
             . "¡Lo esperamos para entregarle su vehículo!";
 
         $notificationService->sendEmail($client, $asunto, $mensajeEmail, $workOrder);

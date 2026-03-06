@@ -115,11 +115,19 @@ const TYPE_OPTIONS = [
 
 function clientName(a: SoraAppointment): string {
     if (a.user) return `${a.user.first_name} ${a.user.last_name}`.trim();
-    return a.guest_name ?? a.conversation?.guest_name ?? 'Invitado';
+    return 'Invitado';
 }
 
 function clientContact(a: SoraAppointment): string {
     if (a.user?.email) return a.user.email;
+    return a.guest_phone ?? a.conversation?.guest_phone ?? '—';
+}
+
+function guestDisplayName(a: SoraAppointment): string {
+    return a.guest_name ?? a.conversation?.guest_name ?? '—';
+}
+
+function guestDisplayPhone(a: SoraAppointment): string {
     return a.guest_phone ?? a.conversation?.guest_phone ?? '—';
 }
 
@@ -184,9 +192,17 @@ export default function SoraAppointmentsIndex({ appointments, filters, stats }: 
                     </div>
                     <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-foreground">{clientName(a)}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                            {clientContact(a)}
-                        </p>
+                        {a.user
+                            ? (
+                                <p className="truncate text-xs text-muted-foreground">{clientContact(a)}</p>
+                            )
+                            : (
+                                <>
+                                    <p className="truncate text-xs text-muted-foreground">{guestDisplayName(a)}</p>
+                                    <p className="truncate text-xs text-muted-foreground">{guestDisplayPhone(a)}</p>
+                                </>
+                            )
+                        }
                     </div>
                 </div>
             ),
